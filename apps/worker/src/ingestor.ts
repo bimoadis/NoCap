@@ -145,13 +145,21 @@ function startWebSocket() {
     }
   });
 
+  let reconnectDelay = 5000;
+
   ws.on('close', () => {
-    console.log('[INGESTOR] Helius WebSocket connection closed. Reconnecting in 5s...');
-    setTimeout(startWebSocket, 5000);
+    console.log(`[INGESTOR] Helius WebSocket connection closed. Reconnecting in ${reconnectDelay / 1000}s...`);
+    setTimeout(startWebSocket, reconnectDelay);
   });
 
-  ws.on('error', (err) => {
-    console.error('[INGESTOR] WebSocket error:', err);
+  ws.on('error', (err: any) => {
+    if (err.code === 'ENOTFOUND') {
+      console.warn('[INGESTOR] Helius WebSocket domain (atlas.helius-rpc.com) is unreachable. Check your DNS or internet connection.');
+      reconnectDelay = 30000; // Slow down retry when network is down
+    } else {
+      console.error('[INGESTOR] WebSocket error:', err.message || err);
+      reconnectDelay = 10000;
+    }
   });
 }
 
