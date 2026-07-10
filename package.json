@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm -r build",
+    "dev": "pnpm --filter @nocap/web --filter @nocap/worker --parallel dev",
     "dev:web": "pnpm --filter @nocap/web dev",
     "dev:worker": "pnpm --filter @nocap/worker dev",
     "db:migrate": "pnpm --filter @nocap/db db:migrate",
