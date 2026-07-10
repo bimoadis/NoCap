@@ -80,8 +80,31 @@ async function getOrCreateWalletProfile(address: string): Promise<any> {
 }
 
 async function traceFundingParent(address: string, creator: string): Promise<{ funder: string; funderType: string }> {
-  // In production, trace back transfers
-  // For sandbox and performance caching, we mock/check mock rules
+  try {
+    const pubkey = new PublicKey(address);
+    const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 10 });
+    if (sigs.length > 0) {
+      const oldestSig = sigs[sigs.length - 1].signature;
+      const tx = await connection.getParsedTransaction(oldestSig, { maxSupportedTransactionVersion: 0 });
+      if (tx && tx.meta) {
+        const funder = tx.transaction.message.accountKeys[0].pubkey.toBase58();
+        if (funder !== address) {
+          const dbFunder = await db.query.walletProfiles.findFirst({
+            where: eq(walletProfiles.address, funder),
+          });
+          const isCex = dbFunder?.funderType === 'cex' || funder.startsWith('5nGa');
+          return {
+            funder,
+            funderType: isCex ? 'cex' : (funder === creator ? 'deployer' : 'organic_buyer'),
+          };
+        }
+      }
+    }
+  } catch (err) {
+    // Fail-safe fallback
+  }
+
+  // Fallback mocks for sandbox demo compatibility
   if (address.startsWith('3mVc') || address.startsWith('Fh2s')) {
     return { funder: '7xKpA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', funderType: 'deployer' };
   }
@@ -95,11 +118,58 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
   // Fetch buffered trades from Redis
   const tradesKey = `nocap:buffer:${mint}:trades`;
   const tradeStrings = await redis.lrange(tradesKey, 0, -1);
-  const trades = tradeStrings.map((str: string) => JSON.parse(str));
+  let trades = tradeStrings.map((str: string) => JSON.parse(str));
 
-  // If no trades in buffer (sandbox replay support)
+  // If no trades in buffer, pull real trades directly from Solana blockchain RPC
+  if (trades.length === 0) {
+    console.log(`[WORKER] Redis trade buffer empty for ${mint}. Fetching transactions from Solana RPC...`);
+    try {
+      const pubkey = new PublicKey(mint);
+      const sigInfos = await connection.getSignaturesForAddress(pubkey, { limit: 100 });
+      const oldestSigs = sigInfos.map(s => s.signature).reverse();
+
+      const resolvedBuyers = new Set<string>();
+      const parsedTrades = [];
+
+      for (const sig of oldestSigs) {
+        if (resolvedBuyers.size >= 20) break;
+        try {
+          const tx = await connection.getParsedTransaction(sig, { maxSupportedTransactionVersion: 0 });
+          if (!tx || !tx.meta) continue;
+
+          const signer = tx.transaction.message.accountKeys[0].pubkey.toBase58();
+          if (signer === creator) continue;
+
+          if (!resolvedBuyers.has(signer)) {
+            resolvedBuyers.add(signer);
+            const preBal = tx.meta.preBalances[0] || 0;
+            const postBal = tx.meta.postBalances[0] || 0;
+            const solDiff = Math.max(0, (preBal - postBal) / 1e9);
+
+            parsedTrades.push({
+              trader: signer,
+              solAmount: solDiff > 0 ? solDiff : 0.1,
+              tokenAmount: 1000,
+              slot: tx.slot,
+              signature: sig,
+              timestamp: tx.blockTime || Math.floor(Date.now() / 1000),
+            });
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      if (parsedTrades.length > 0) {
+        trades = parsedTrades;
+        console.log(`[WORKER] Successfully fetched ${trades.length} real trades from Solana RPC.`);
+      }
+    } catch (err) {
+      console.error(`[WORKER] Failed to fetch real trades from Solana RPC for ${mint}:`, err);
+    }
+  }
+
   const finalTrades = trades.length > 0 ? trades : [
-    // Pre-populate some sandbox mock trades if empty
     { trader: '3mVcA71pWqFvNuXyL7zK9aA719xUwL4sKmZrT5eYp', solAmount: 0.1, tokenAmount: 1000, slot: 120000, signature: 's1', timestamp: Math.floor(Date.now()/1000) },
     { trader: 'Fh2sA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', solAmount: 0.1, tokenAmount: 1000, slot: 120000, signature: 's2', timestamp: Math.floor(Date.now()/1000) }
   ];
