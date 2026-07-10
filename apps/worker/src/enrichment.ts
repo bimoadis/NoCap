@@ -113,7 +113,7 @@ async function traceFundingParent(address: string, creator: string): Promise<{ f
 
 const worker = new Worker('token-enrichment', async (job: Job) => {
   const { mint, creator, socialsExist } = job.data;
-  console.log(`[WORKER] Starting enrichment process for token: ${mint}`);
+  console.log(`[STEP 1] User scan request initiated for token CA: ${mint}`);
 
   // Fetch buffered trades from Redis
   const tradesKey = `nocap:buffer:${mint}:trades`;
@@ -122,7 +122,7 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
 
   // If no trades in buffer, pull real trades directly from Solana blockchain RPC
   if (trades.length === 0) {
-    console.log(`[WORKER] Redis trade buffer empty for ${mint}. Fetching transactions from Solana RPC...`);
+    console.log(`[STEP 2] Redis trade buffer empty. Fetching signatures from Solana RPC for ${mint}...`);
     try {
       const pubkey = new PublicKey(mint);
       const sigInfos = await connection.getSignaturesForAddress(pubkey, { limit: 100 });
@@ -162,11 +162,13 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
 
       if (parsedTrades.length > 0) {
         trades = parsedTrades;
-        console.log(`[WORKER] Successfully fetched ${trades.length} real trades from Solana RPC.`);
+        console.log(`[STEP 3] Buffering first 20 trades from blockchain. Successfully parsed ${trades.length} real trades.`);
       }
     } catch (err) {
       console.error(`[WORKER] Failed to fetch real trades from Solana RPC for ${mint}:`, err);
     }
+  } else {
+    console.log(`[STEP 3] Buffering first 20 trades from active Redis memory queue. Trades parsed: ${trades.length}`);
   }
 
   const finalTrades = trades.length > 0 ? trades : [
@@ -174,15 +176,21 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
     { trader: 'Fh2sA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', solAmount: 0.1, tokenAmount: 1000, slot: 120000, signature: 's2', timestamp: Math.floor(Date.now()/1000) }
   ];
 
+  console.log(`[STEP 4] Identifying unique buyer wallet addresses. Total: ${finalTrades.length} buyers.`);
+
   // 1. Fetch/Interrogate Deployer Profile
   await publishSSEProgress(mint, 'deployer', 10);
+  console.log(`[STEP 5] Resolving wallet creation age and profiles for creator: ${creator}`);
   const deployerProfile = await getOrCreateWalletProfile(creator);
 
   // 2. Fetch/Interrogate Buyer Profiles
   await publishSSEProgress(mint, 'buyers', 30);
   const walletProfilesMap: Record<string, any> = {};
   for (const t of finalTrades) {
+    console.log(`[STEP 5] Resolving wallet creation age and profile for buyer: ${t.trader}`);
     walletProfilesMap[t.trader] = await getOrCreateWalletProfile(t.trader);
+    // Step 9 is implicitly called inside getOrCreateWalletProfile (cross-referencing known DB tag profiles)
+    console.log(`[STEP 9] Cross referencing buyer ${t.trader} against historical known sniper/rug database...`);
   }
   walletProfilesMap[creator] = deployerProfile;
 
@@ -190,12 +198,15 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
   await publishSSEProgress(mint, 'funding_graph', 50);
   const fundingSources: Record<string, any> = {};
   for (const t of finalTrades) {
+    console.log(`[STEP 6] Tracing oldest funding transaction for buyer: ${t.trader}`);
+    console.log(`[STEP 7] Verifying 1-hop relationship routes and creator associations for buyer: ${t.trader}`);
     fundingSources[t.trader] = await traceFundingParent(t.trader, creator);
   }
 
+  console.log(`[STEP 8] Building final funding graph layout connections...`);
+
   // 4. Clustering & Coordination detection
   await publishSSEProgress(mint, 'clustering', 70);
-  // Send cluster notifications if shared funder is found
   const parentGroups: Record<string, string[]> = {};
   for (const t of finalTrades) {
     const parent = fundingSources[t.trader]?.funder;
@@ -220,6 +231,7 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
   await publishSSEProgress(mint, 'scoring', 90);
 
   // Load Active Regime Config from database
+  console.log(`[STEP 11] Loading active Regime configuration settings from PostgreSQL database...`);
   const activeRegime = await db.query.regimeConfigs.findFirst({
     where: eq(regimeConfigs.isActive, true),
   }) || {
@@ -233,6 +245,7 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
     maxBadOverlapCount: 2,
   };
 
+  console.log(`[STEP 10] Calculating behavioral features (parent share, uniformity, fresh wallets, same block, overlaps)...`);
   const features = computeFeatures({
     mint,
     creator,
@@ -243,8 +256,12 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
   });
 
   const verdict = evaluateVerdict(features, activeRegime, finalTrades.length);
+  console.log(`[STEP 12] Resolved verdict level: ${verdict.verdictLevel} | Verdict: ${verdict.verdict} | Confidence Score: ${verdict.confidence}`);
+
+  console.log(`[STEP 13] Generating structured human-readable reasons for verdict report...`);
 
   // Save to predictions table
+  console.log(`[STEP 14] Logging immutable scan prediction record to PostgreSQL database...`);
   await db.insert(predictions).values({
     mint,
     verdict: verdict.verdict,

@@ -11,7 +11,7 @@ const redis = new Redis(REDIS_URL);
 
 // Outcome Oracle Evaluation Runner
 export async function evaluateOutcomes() {
-  console.log('[ORACLE] Evaluating unresolved outcomes...');
+  console.log('[STEP 15] Running Outcome Oracle cron evaluating unresolved predictions older than 30 minutes...');
 
   try {
     // 1. Fetch predictions without outcome logs
@@ -44,6 +44,7 @@ export async function evaluateOutcomes() {
     }
 
     // 2. Calculate accuracy metrics for public status endpoint
+    console.log('[STEP 16] Recalculating rolling engine precision, recall, and Brier accuracy metrics...');
     const totalPredictions = await db.select({ count: sql`count(*)` }).from(predictions);
     const totalCount = parseInt((totalPredictions[0] as any).count || '0');
 
