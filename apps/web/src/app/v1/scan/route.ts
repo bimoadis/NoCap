@@ -4,14 +4,20 @@ import { Redis } from 'ioredis';
 import { db, predictions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
 import { URL } from 'url';
+import dotenv from 'dotenv';
+
+dotenv.config();
+dotenv.config({ path: '../../.env' });
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const redisUrl = new URL(REDIS_URL);
-const connectionOptions = {
+const connectionOptions: any = {
   host: redisUrl.hostname,
   port: parseInt(redisUrl.port || '6379'),
   password: redisUrl.password || undefined,
   username: redisUrl.username || undefined,
+  maxRetriesPerRequest: null,
+  tls: redisUrl.protocol === 'rediss:' ? {} : undefined,
 };
 
 // Initialize lazy Redis clients
@@ -186,7 +192,7 @@ async function handleScan(mint: string | null, stream: boolean): Promise<Respons
 
   // 2. Trigger enrichment scan job (with sandbox fallback if Redis/Queue is down)
   const redis = getRedis();
-  const isRedisConnected = redis.status === 'ready';
+  const isRedisConnected = redis.status === 'ready' || redis.status === 'connecting' || redis.status === 'connect';
   const isOrganic = mint.startsWith('Gv3k') || mint.endsWith('pump') === false;
 
   if (!isRedisConnected) {

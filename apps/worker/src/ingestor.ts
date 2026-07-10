@@ -3,6 +3,7 @@ import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
 import { parsePumpTransaction, PUMP_PROGRAM_ID } from '@nocap/core';
+import './enrichment.js';
 
 dotenv.config();
 dotenv.config({ path: '../../.env' });
@@ -20,12 +21,13 @@ import { URL } from 'url';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const redisUrl = new URL(REDIS_URL);
-const connectionOptions = {
+const connectionOptions: any = {
   host: redisUrl.hostname,
   port: parseInt(redisUrl.port || '6379'),
   password: redisUrl.password || undefined,
   username: redisUrl.username || undefined,
   maxRetriesPerRequest: null,
+  tls: redisUrl.protocol === 'rediss:' ? {} : undefined,
 };
 
 const redis = new Redis(REDIS_URL, { maxRetriesPerRequest: null });

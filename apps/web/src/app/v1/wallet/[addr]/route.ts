@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
 import { db, walletProfiles } from '@nocap/db';
 import { eq } from 'drizzle-orm';
+import dotenv from 'dotenv';
+
+dotenv.config();
+dotenv.config({ path: '../../.env' });
 
 export async function GET(
   request: NextRequest,

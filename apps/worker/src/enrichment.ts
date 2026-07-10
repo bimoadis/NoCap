@@ -15,16 +15,18 @@ const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com';
 
 const redisUrl = new URL(REDIS_URL);
-const connectionOptions = {
+const connectionOptions: any = {
   host: redisUrl.hostname,
   port: parseInt(redisUrl.port || '6379'),
   password: redisUrl.password || undefined,
   username: redisUrl.username || undefined,
   maxRetriesPerRequest: null,
+  tls: redisUrl.protocol === 'rediss:' ? {} : undefined,
 };
 
 const redis = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 const connection = new Connection(RPC_ENDPOINT);
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // SSE update helper
 async function publishSSEProgress(mint: string, step: string, pct: number, extraData?: any) {
@@ -191,6 +193,7 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
     walletProfilesMap[t.trader] = await getOrCreateWalletProfile(t.trader);
     // Step 9 is implicitly called inside getOrCreateWalletProfile (cross-referencing known DB tag profiles)
     console.log(`[STEP 9] Cross referencing buyer ${t.trader} against historical known sniper/rug database...`);
+    await sleep(350); // 350ms delay to prevent Helius RPC 429 errors
   }
   walletProfilesMap[creator] = deployerProfile;
 
@@ -201,6 +204,7 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
     console.log(`[STEP 6] Tracing oldest funding transaction for buyer: ${t.trader}`);
     console.log(`[STEP 7] Verifying 1-hop relationship routes and creator associations for buyer: ${t.trader}`);
     fundingSources[t.trader] = await traceFundingParent(t.trader, creator);
+    await sleep(350); // 350ms delay to prevent Helius RPC 429 errors
   }
 
   console.log(`[STEP 8] Building final funding graph layout connections...`);
