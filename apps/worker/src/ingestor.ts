@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { parsePumpTransaction, PUMP_PROGRAM_ID } from '@nocap/core';
 
 dotenv.config();
+dotenv.config({ path: '../../.env' });
 
 function extractApiKey(key: string): string {
   if (!key) return '';

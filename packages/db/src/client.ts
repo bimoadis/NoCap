@@ -4,6 +4,7 @@ import * as schema from './schema.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
+dotenv.config({ path: '../../.env' });
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,

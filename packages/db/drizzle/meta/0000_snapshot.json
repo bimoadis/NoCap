@@ -1,0 +1,308 @@
+{
+  "id": "19be8b4b-66a1-4161-8e4a-98c749e02e9e",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "5",
+  "dialect": "pg",
+  "tables": {
+    "outcomes": {
+      "name": "outcomes",
+      "schema": "",
+      "columns": {
+        "mint": {
+          "name": "mint",
+          "type": "varchar(44)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "rug_30m": {
+          "name": "rug_30m",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "dead_24h": {
+          "name": "dead_24h",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "alive_24h": {
+          "name": "alive_24h",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "graduated": {
+          "name": "graduated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "peak_price_sol": {
+          "name": "peak_price_sol",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "exit_metrics": {
+          "name": "exit_metrics",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "predictions": {
+      "name": "predictions",
+      "schema": "",
+      "columns": {
+        "mint": {
+          "name": "mint",
+          "type": "varchar(44)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subclass": {
+          "name": "subclass",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reasons": {
+          "name": "reasons",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "features": {
+          "name": "features",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "regime_version": {
+          "name": "regime_version",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "regime_configs": {
+      "name": "regime_configs",
+      "schema": "",
+      "columns": {
+        "regime_version": {
+          "name": "regime_version",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "max_parent_share": {
+          "name": "max_parent_share",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_fresh_wallet_ratio": {
+          "name": "max_fresh_wallet_ratio",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_block_trades": {
+          "name": "max_block_trades",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_size_uniformity": {
+          "name": "max_size_uniformity",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_dev_launches_dead": {
+          "name": "max_dev_launches_dead",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "min_dev_hold_sol": {
+          "name": "min_dev_hold_sol",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_bad_overlap_count": {
+          "name": "max_bad_overlap_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "wallet_profiles": {
+      "name": "wallet_profiles",
+      "schema": "",
+      "columns": {
+        "address": {
+          "name": "address",
+          "type": "varchar(44)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "first_tx_timestamp": {
+          "name": "first_tx_timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tx_count": {
+          "name": "tx_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_funder": {
+          "name": "last_funder",
+          "type": "varchar(44)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "funder_type": {
+          "name": "funder_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
+        },
+        "reputation_flags": {
+          "name": "reputation_flags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "launches": {
+          "name": "launches",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "dead_under_10m": {
+          "name": "dead_under_10m",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "avg_extraction_sol": {
+          "name": "avg_extraction_sol",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "funded_snipers": {
+          "name": "funded_snipers",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cluster": {
+          "name": "cluster",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trust": {
+          "name": "trust",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

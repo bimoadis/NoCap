@@ -9,6 +9,7 @@ import { computeFeatures, evaluateVerdict, ComputedFeatures } from '@nocap/core'
 import { URL } from 'url';
 
 dotenv.config();
+dotenv.config({ path: '../../.env' });
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com';
