@@ -21,9 +21,10 @@ export interface ScorerVerdictResult {
   subclass: 'extraction' | 'organic' | 'coordinated';
   confidence: number;
   reasons: ScorerVerdictReason[];
+  verdictLevel?: 'PRELIMINARY' | 'PROVISIONAL' | 'FINAL';
 }
 
-export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerThresholds): ScorerVerdictResult {
+export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerThresholds, tradeCount: number = 20): ScorerVerdictResult {
   const reasons: ScorerVerdictReason[] = [];
   let scoreSum = 0;
   let maxScorePossible = 0;
@@ -116,11 +117,21 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
     });
   }
 
-  const confidence = scoreSum / maxScorePossible;
+  const rawConfidence = scoreSum / maxScorePossible;
+  const completeness = Math.min(1, tradeCount / 20);
+  const confidence = rawConfidence * completeness;
+
+  let verdictLevel: 'PRELIMINARY' | 'PROVISIONAL' | 'FINAL' = 'FINAL';
+  if (tradeCount < 10) {
+    verdictLevel = 'PRELIMINARY';
+  } else if (tradeCount < 20) {
+    verdictLevel = 'PROVISIONAL';
+  }
+
   let verdict: 'CAP' | 'NO CAP' = 'NO CAP';
   let subclass: 'extraction' | 'organic' | 'coordinated' = 'organic';
 
-  if (confidence >= 0.45) {
+  if (rawConfidence >= 0.45) {
     verdict = 'CAP';
     subclass = 'extraction';
   } else if (features.funding_parent_share > 0.20 || features.same_block_count >= 3) {
@@ -148,5 +159,6 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
     subclass,
     confidence: Math.round(confidence * 100) / 100,
     reasons,
+    verdictLevel,
   };
 }

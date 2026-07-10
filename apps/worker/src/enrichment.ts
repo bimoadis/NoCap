@@ -242,7 +242,7 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
     fundingSources,
   });
 
-  const verdict = evaluateVerdict(features, activeRegime);
+  const verdict = evaluateVerdict(features, activeRegime, finalTrades.length);
 
   // Save to predictions table
   await db.insert(predictions).values({
@@ -262,6 +262,7 @@ const worker = new Worker('token-enrichment', async (job: Job) => {
     confidence: verdict.confidence,
     subclass: verdict.subclass,
     reasons: verdict.reasons,
+    verdictLevel: verdict.verdictLevel,
   }));
 
   console.log(`[WORKER] Scored verdict for ${mint}: ${verdict.verdict} (${verdict.confidence})`);

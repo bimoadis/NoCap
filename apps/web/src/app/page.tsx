@@ -52,6 +52,7 @@ export default function Home() {
   const [verdictConf, setVerdictConf] = useState<number>(0);
   const [verdictSentence, setVerdictSentence] = useState<string>('');
   const [verdictExps, setVerdictExps] = useState<React.ReactNode[]>([null, null, '', '']);
+  const [verdictLevel, setVerdictLevel] = useState<string>('FINAL');
 
   // UI Interactive States
   const [openAccordion, setOpenAccordion] = useState<number | null>(null);
@@ -237,6 +238,7 @@ export default function Home() {
     setVerdictTime(scenario.time);
     setVerdictExps(scenario.exps);
     setVerdictConf(scenario.conf);
+    setVerdictLevel(scenario.verdictLevel || 'FINAL');
 
     requestAnimationFrame(() => {
       setVerdictIn(true);
@@ -348,6 +350,7 @@ export default function Home() {
             time: durationS,
             kind: data.verdict === 'CAP' ? 'cap' : 'nocap',
             conf: Math.round(data.confidence * 100),
+            verdictLevel: data.verdictLevel || 'FINAL',
             sentence: data.reasons?.[0]?.text || (data.verdict === 'CAP' ? 'Supply pattern controlled.' : 'Organic trading flow confirmed.'),
             exps: [
               data.verdict === 'CAP' ? fgBundle() : fgOrganic(),
@@ -1006,7 +1009,18 @@ export default function Home() {
               <div className="verdict-wrap show">
                 <div className={`vcard in is-${verdictType}`}>
                   <div className="v-left">
-                    <span className="eyebrow">SCAN REPORT</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="eyebrow">SCAN REPORT</span>
+                      {verdictLevel && (
+                        <span className={`px-2 py-0.5 text-[9px] tracking-widest font-mono rounded uppercase ${
+                          verdictLevel === 'PRELIMINARY' ? 'bg-amber/20 text-amber border border-amber/30' :
+                          verdictLevel === 'PROVISIONAL' ? 'bg-cyan/20 text-cyan border border-cyan/30' :
+                          'bg-emerald/20 text-emerald border border-emerald/30'
+                        }`}>
+                          {verdictLevel}
+                        </span>
+                      )}
+                    </div>
                     <div className="v-chip font-bold">
                       <span className="chip-dot"></span>
                       <span id="vword">{verdictWord}</span>
