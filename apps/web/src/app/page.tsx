@@ -89,7 +89,7 @@ export default function Home() {
           );
         })}
       </svg>
-      <div>one parent <span className="r font-semibold">7xKp…9fQ2</span> funds 14 of 20 buyers · 6 min before launch<br />6 buyers independent</div>
+      <div>one parent <span className="r font-semibold text-red">7xKp…9fQ2</span> funds 14 of 20 buyers · 6 min before launch<br />6 buyers independent</div>
     </div>
   );
 
@@ -110,7 +110,7 @@ export default function Home() {
           );
         })}
       </svg>
-      <div><span className="g font-semibold">17 independent sources</span> · largest shared source funds 2 wallets (CEX hot wallet)</div>
+      <div><span className="g font-semibold text-emerald">17 independent sources</span> · largest shared source funds 2 wallets (CEX hot wallet)</div>
     </div>
   );
 
@@ -139,7 +139,7 @@ export default function Home() {
               <i key={`hs-${i}`} className={cls[i]} style={{ height: `${h}%`, animationDelay: `${i * 40}ms` }}></i>
             ))}
           </div>
-          <div>Random sizes, random timing. Two sniper exits <span className="a font-semibold">absorbed</span> by real demand.</div>
+          <div>Random sizes, random timing. Two sniper exits <span className="a font-semibold text-amber">absorbed</span> by real demand.</div>
         </div>
       );
     }
@@ -427,6 +427,67 @@ export default function Home() {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs]);
+
+  // Hook for reveal system, ladder lighting, and counts up
+  useEffect(() => {
+    // 1. Reveal system
+    const rvIO = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          rvIO.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.rv').forEach((el) => rvIO.observe(el));
+
+    // 2. Ladder Lighting
+    const lio = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        lio.unobserve(e.target);
+        const words = e.target.querySelectorAll('.lw');
+        words.forEach((w, i) => {
+          setTimeout(() => {
+            w.classList.add('lit');
+          }, 400 + i * 380);
+        });
+      });
+    }, { threshold: 0.4 });
+    document.querySelectorAll('[data-ladder]').forEach((el) => lio.observe(el));
+
+    // 3. Count Up
+    const fmtVal = (v: number, kind: string | null) => {
+      if (kind === 'pct') return v.toFixed(1) + '%';
+      if (kind === 'sec') return v.toFixed(1) + 's';
+      return Math.round(v).toLocaleString('en-US');
+    };
+    const countIO = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        countIO.unobserve(e.target);
+        const el = e.target as HTMLElement;
+        const target = parseFloat(el.getAttribute('data-count') || '0');
+        const kind = el.getAttribute('data-fmt');
+        let t0: number | null = null;
+        const stepAnim = (ts: number) => {
+          if (!t0) t0 = ts;
+          let p = Math.min((ts - t0) / 1100, 1);
+          p = 1 - Math.pow(1 - p, 3);
+          el.textContent = fmtVal(target * p, kind);
+          if (p < 1) requestAnimationFrame(stepAnim);
+        };
+        requestAnimationFrame(stepAnim);
+      });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('[data-count]').forEach((el) => countIO.observe(el));
+
+    return () => {
+      rvIO.disconnect();
+      lio.disconnect();
+      countIO.disconnect();
+    };
+  }, []);
 
   // Canvas Particle/Graph Simulator (Hero section)
   useEffect(() => {
@@ -809,27 +870,27 @@ export default function Home() {
         <section className="hero" aria-label="Intro">
           <div className="wrap hero-grid">
             <div className="hero-copy">
-              <span className="eyebrow">Real time wallet intelligence</span>
-              <h1 className="leading-none">
+              <span className="eyebrow rv" style={{ '--i': 0 } as React.CSSProperties}>Real time wallet intelligence</span>
+              <h1 className="leading-none rv" style={{ '--i': 1 } as React.CSSProperties}>
                 Know before<br />
                 <span className="accent text-emerald">you ape.</span>
               </h1>
-              <p className="sub text-dim">
+              <p className="sub text-dim rv" style={{ '--i': 2 } as React.CSSProperties}>
                 NOCAP watches the first trades of every launch, traces who funded every buyer, and returns one verdict in seconds. No charts. No noise. One answer.
               </p>
-              <div className="btn-row">
+              <div className="btn-row rv" style={{ '--i': 3 } as React.CSSProperties}>
                 <a className="btn btn-primary" href="#demo">Run the live demo</a>
                 <a className="btn btn-ghost" href="#api">Get API access</a>
               </div>
-              <div className="hero-stats">
+              <div className="hero-stats rv" style={{ '--i': 4 } as React.CSSProperties}>
                 <span>
                   <span className="livedot" aria-hidden="true"></span>ENGINE LIVE
                 </span>
-                <span>VERDICTS TODAY <b>41,208</b></span>
-                <span>MEDIAN <b>8.4s</b></span>
+                <span>VERDICTS TODAY <b data-count="41208" data-fmt="int">41,208</b></span>
+                <span>MEDIAN <b data-count="8.4" data-fmt="sec">8.4s</b></span>
               </div>
             </div>
-            <div className="hero-stage border border-line" aria-label="Live funding graph simulation">
+            <div className="hero-stage border border-line rv" style={{ '--i': 1 } as React.CSSProperties} aria-label="Live funding graph simulation">
               <canvas id="net" ref={canvasRef}></canvas>
               <span className="stage-tag">STAGE · LIVE FUNDING GRAPH</span>
               <div className="scanline" aria-live="polite">
@@ -843,11 +904,11 @@ export default function Home() {
         <section className="philo" aria-label="Philosophy">
           <div className="wrap">
             <div className="philo-lines">
-              <p>Raw chain data is <b>weather physics.</b></p>
-              <p>Terminals hand you the <b>equations.</b></p>
-              <p>NOCAP hands you <span className="em"><b>bring an umbrella.</b></span></p>
+              <p className="rv">Raw chain data is <b>weather physics.</b></p>
+              <p className="rv" style={{ '--i': 1 } as React.CSSProperties}>Terminals hand you the <b>equations.</b></p>
+              <p className="rv" style={{ '--i': 2 } as React.CSSProperties}>NOCAP hands you <span className="em"><b>bring an umbrella.</b></span></p>
             </div>
-            <div className="weather">
+            <div className="weather rv" style={{ '--i': 3 } as React.CSSProperties}>
               <div className="wx-card" aria-label="Raw data example">
                 precip 43.2mm · pressure 968hPa<br />
                 wind 31kt gusting 44 · humidity 96%<br />
@@ -858,7 +919,7 @@ export default function Home() {
                 <span className="chip-dot" aria-hidden="true"></span>Bring an umbrella.
               </div>
             </div>
-            <p className="wx-cap">SAME ENERGY · NOCAP READS 300 TRANSFERS SO YOUR USERS READ ONE LINE</p>
+            <p className="wx-cap rv" style={{ '--i': 4 } as React.CSSProperties}>SAME ENERGY · NOCAP READS 300 TRANSFERS SO YOUR USERS READ ONE LINE</p>
           </div>
         </section>
 
@@ -866,14 +927,14 @@ export default function Home() {
         <section id="demo" aria-label="Interactive demo">
           <div className="wrap">
             <div className="sec-head">
-              <span className="eyebrow">Live demo</span>
-              <h2>Paste a mint.<br />Watch it get interrogated.</h2>
-              <p className="sub">
+              <span className="eyebrow rv">Live demo</span>
+              <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>Paste a mint.<br />Watch it get interrogated.</h2>
+              <p className="sub rv" style={{ '--i': 2 } as React.CSSProperties}>
                 Two real launch patterns, replayed. The engine buffers the first 20 trades, traces the money behind them, and speaks only when it is sure.
               </p>
             </div>
 
-            <div className="term border border-line">
+            <div className="term border border-line rv" style={{ '--i': 3 } as React.CSSProperties}>
               <div className="term-head">
                 <div className="dots" aria-hidden="true">
                   <span></span><span></span><span></span>
@@ -1031,13 +1092,13 @@ export default function Home() {
         <section id="wallets" aria-label="Wallet reputations">
           <div className="wrap">
             <div className="sec-head">
-              <span className="eyebrow">Reputations</span>
-              <h2>Known entity tags.</h2>
-              <p className="sub">
+              <span className="eyebrow rv">Reputations</span>
+              <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>Known entity tags.</h2>
+              <p className="sub rv" style={{ '--i': 2 } as React.CSSProperties}>
                 NOCAP tags entities based on their historical profiles. Every address that participates in a launch is resolved against our memory of prior rugs.
               </p>
             </div>
-            <div className="wallet-zone">
+            <div className="wallet-zone rv" style={{ '--i': 3 } as React.CSSProperties}>
               <div className="wallet-grid">
                 {wallets.map((w, idx) => (
                   <button
@@ -1094,13 +1155,13 @@ export default function Home() {
         <section id="integrate" aria-label="Integration workflow">
           <div className="wrap">
             <div className="sec-head">
-              <span className="eyebrow">Integrate</span>
-              <h2>Embed verdict engines.</h2>
-              <p className="sub">
+              <span className="eyebrow rv">Integrate</span>
+              <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>Embed verdict engines.</h2>
+              <p className="sub rv" style={{ '--i': 2 } as React.CSSProperties}>
                 Consume SSE progress feeds inside your app or embed our verdict card iframe. Simple endpoints, low-latency payloads.
               </p>
             </div>
-            <div className="diagram border border-line rounded-lg">
+            <div className="diagram border border-line rounded-lg rv" style={{ '--i': 3 } as React.CSSProperties}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 170">
                 <rect x="14" y="24" width="160" height="74" rx="4" className="d-box" />
                 <text x="32" y="54" className="d-label">Solana RPC</text>
@@ -1124,24 +1185,24 @@ export default function Home() {
                 <text x="592" y="76" className="d-sub">SSE stream Verdict</text>
               </svg>
             </div>
-            <div className="term-chips">
+            <div className="term-chips rv" style={{ '--i': 4 } as React.CSSProperties}>
               <div className="tchip"><span className="chip-dot"></span>React hook</div>
               <div className="tchip"><span className="chip-dot"></span>Typescript SDK</div>
               <div className="tchip"><span className="chip-dot"></span>HTML Iframe Embed</div>
               <div className="tchip"><span className="chip-dot"></span>JSON REST Endpoint</div>
             </div>
             <div className="surfaces">
-              <div className="surf">
+              <div className="surf rv">
                 <span className="mono-tag">01 · LIVE FEED</span>
                 <h3>Server-Sent Events</h3>
                 <p>Subscribe to realtime launch progress. Receive notifications at every step of our evaluation chain.</p>
               </div>
-              <div className="surf">
+              <div className="surf rv" style={{ '--i': 1 } as React.CSSProperties}>
                 <span className="mono-tag">02 · DIRECT FETCH</span>
                 <h3>JSON REST API</h3>
                 <p>Query any mint address or search wallet history. Complete index of prediction historical data.</p>
               </div>
-              <div className="surf">
+              <div className="surf rv" style={{ '--i': 2 } as React.CSSProperties}>
                 <span className="mono-tag">03 · EMBED CARD</span>
                 <h3>Iframe Embeds</h3>
                 <p>Render a fully functional, animated NOCAP verdict box in your application with one line of HTML code.</p>
@@ -1154,13 +1215,13 @@ export default function Home() {
         <section id="api" aria-label="API reference docs">
           <div className="wrap">
             <div className="sec-head">
-              <span className="eyebrow">API Spec</span>
-              <h2>Production endpoints.</h2>
-              <p className="sub">
+              <span className="eyebrow rv">API Spec</span>
+              <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>Production endpoints.</h2>
+              <p className="sub rv" style={{ '--i': 2 } as React.CSSProperties}>
                 Our HTTP API runs on low-latency global edges. Integrate transaction-level wallet insights directly into your terminal or trading bot.
               </p>
             </div>
-            <div className="api-card border border-line">
+            <div className="api-card border border-line rv" style={{ '--i': 3 } as React.CSSProperties}>
               <div className="tabs">
                 <button
                   className={`tab ${activeTab === 'csharp' ? 'active' : ''}`}
@@ -1177,11 +1238,11 @@ export default function Home() {
                   GET /v1/wallet/:address
                 </button>
                 <button
-                  className={`tab ${activeTab === 'worker' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('worker')}
+                  className={`tab ${activeTab === 'embed' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('embed')}
                   type="button"
                 >
-                  GET /v1/metrics/public
+                  Iframe Embed Code
                 </button>
               </div>
               
@@ -1226,22 +1287,13 @@ export default function Home() {
                 </div>
               )}
 
-              {activeTab === 'worker' && (
+              {activeTab === 'embed' && (
                 <div className="pane active font-mono">
-                  <span className="c-dim">// Query Engine Global Statistics</span><br />
-                  &gt; GET http://localhost:3000/v1/metrics/public<br />
-                  <br />
-                  <span className="c-dim">// Response Body</span><br />
-                  {`{`}<br />
-                  &nbsp;&nbsp;&quot;verdictsToday&quot;: <span className="c-num">41208</span>,<br />
-                  &nbsp;&nbsp;&quot;medianScanSpeed&quot;: <span className="c-str">&quot;8.4s&quot;</span>,<br />
-                  &nbsp;&nbsp;&quot;rulesetVersion&quot;: <span className="c-str">&quot;REGIME W14&quot;</span>,<br />
-                  &nbsp;&nbsp;&quot;accuracyStats&quot;: {`{`}<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&quot;brierScore&quot;: <span className="c-num">0.084</span>,<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&quot;precision30d&quot;: <span className="c-num">0.914</span>,<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&quot;recall30d&quot;: <span className="c-num">0.892</span><br />
-                  &nbsp;&nbsp;{`}`}<br />
-                  {`}`}
+                  <span className="c-dim">// Verdict chip renders inline · updates over SSE</span><br />
+                  &lt;<span className="c-key">iframe</span><br />
+                  &nbsp;&nbsp;<span className="c-key">src</span>=<span className="c-str">&quot;http://localhost:3000/embed?mint=9xUw…pump&quot;</span><br />
+                  &nbsp;&nbsp;<span className="c-key">width</span>=<span className="c-num">&quot;360&quot;</span> <span className="c-key">height</span>=<span className="c-num">&quot;180&quot;</span>&gt;<br />
+                  &lt;/<span className="c-key">iframe</span>&gt;
                 </div>
               )}
               <div className="api-note border-t border-line pt-4">
@@ -1251,29 +1303,66 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ================= STATS BAND ================= */}
-        <section className="stats-band text-center" aria-label="Global performance stats">
+        {/* ================= STORY ================= */}
+        <section aria-label="Why NOCAP">
           <div className="wrap">
+            <div className="sec-head">
+              <span className="eyebrow rv">Why NOCAP</span>
+              <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>Terminals show data.<br />NOCAP concludes.</h2>
+            </div>
+            <div className="story-grid">
+              <div className="ladder rv" data-ladder>
+                <span className="lw">Data</span><span className="la">&darr;</span>
+                <span className="lw">Intelligence</span><span className="la">&darr;</span>
+                <span className="lw final">Verdict</span>
+                <p className="cap-line">Everything starts as raw transfers. The engine turns them into one answer.</p>
+              </div>
+              <div className="ladder rv" data-ladder style={{ '--i': 1 } as React.CSSProperties}>
+                <span className="lw">Terminal</span><span className="la">&darr;</span>
+                <span className="lw">NOCAP layer</span><span className="la">&darr;</span>
+                <span className="lw final">Decision</span>
+                <p className="cap-line">Your interface stays the same. Your users stop guessing.</p>
+              </div>
+              <div className="ladder rv" data-ladder style={{ '--i': 2 } as React.CSSProperties}>
+                <span className="lw">Wallet</span><span className="la">&darr;</span>
+                <span className="lw">Relationships</span><span className="la">&darr;</span>
+                <span className="lw final">Truth</span>
+                <p className="cap-line">A wallet alone says nothing. Its funding graph says everything.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================= STATS BAND / TRACK RECORD ================= */}
+        <section className="stats-band text-center" id="track" aria-label="Track record">
+          <div className="wrap">
+            <div className="sec-head" style={{ marginTop: '64px' }}>
+              <span className="eyebrow rv">Track record</span>
+              <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>Accuracy is the product.</h2>
+              <p className="sub rv" style={{ '--i': 2 } as React.CSSProperties}>
+                Every verdict is logged before the outcome resolves. The loop retrains on its own misses, and the numbers stay public.
+              </p>
+            </div>
             <div className="stats-grid">
-              <div className="stat">
-                <div className="n"><span className="g text-emerald">91.4%</span></div>
-                <div className="l">Brier Precision</div>
+              <div className="stat rv">
+                <div className="n"><span data-count="94.2" data-fmt="pct">0</span></div>
+                <div className="l">Precision on CAP calls</div>
               </div>
-              <div className="stat">
-                <div className="n">89.2%</div>
-                <div className="l">Recall Rate</div>
+              <div className="stat rv" style={{ '--i': 1 } as React.CSSProperties}>
+                <div className="n"><span data-count="1284902" data-fmt="int">0</span></div>
+                <div className="l">Verdicts issued</div>
               </div>
-              <div className="stat">
-                <div className="n">8.4s</div>
-                <div className="l">Avg Scan Speed</div>
+              <div className="stat rv" style={{ '--i': 2 } as React.CSSProperties}>
+                <div className="n"><span data-count="8.4" data-fmt="sec">0</span></div>
+                <div className="l">Median verdict time</div>
               </div>
-              <div className="stat">
-                <div className="n">12.8M</div>
-                <div className="l">Txs Traced</div>
+              <div className="stat rv" style={{ '--i': 3 } as React.CSSProperties}>
+                <div className="n"><span data-count="312" data-fmt="int">0</span></div>
+                <div className="l">Clusters flagged today</div>
               </div>
             </div>
             <div className="stats-note">
-              30-day rolling performance parameters · updated hourly using live exchange oracle logs.
+              SAMPLE METRICS FOR THIS CONCEPT BUILD · PRODUCTION NUMBERS PUBLISH WEEKLY, MISSES INCLUDED
             </div>
           </div>
         </section>
@@ -1281,52 +1370,48 @@ export default function Home() {
         {/* ================= CTA ================= */}
         <section className="cta" aria-label="Action prompt">
           <div className="wrap">
-            <span className="eyebrow justify-center">Engine v1</span>
-            <h2>Integrate NOCAP today.</h2>
-            <p className="sub text-dim">
-              Protect your users from developer extraction rugs. Standard REST API documentation and TS SDK available immediately.
+            <span className="eyebrow justify-center rv">Integrate</span>
+            <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>Put a verdict next to every ticker.</h2>
+            <p className="sub text-dim rv" style={{ '--i': 2 } as React.CSSProperties}>
+              One API call. One iframe. Your users know before they ape.
             </p>
-            <div className="btn-row">
-              <a className="btn btn-primary" href="#api">Read API Docs</a>
-              <a className="btn btn-ghost" href="#integrate">Developer integration</a>
+            <div className="btn-row justify-center rv" style={{ '--i': 3 } as React.CSSProperties}>
+              <a className="btn btn-primary" href="#api">Get API Access</a>
+              <a className="btn btn-ghost" href="#integrate">Read the integration docs</a>
             </div>
           </div>
         </section>
       </main>
 
       <footer>
-        <div className="wrap foot">
-          <a href="#top" className="brand">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="11" viewBox="-4 -2 22 11" shapeRendering="crispEdges">
-              <rect x="5" y="0" width="5" height="1" fill="#eef3fa" />
-              <rect x="4" y="1" width="7" height="1" fill="#eef3fa" />
-              <rect x="3" y="2" width="9" height="1" fill="#eef3fa" />
-              <rect x="3" y="3" width="9" height="1" fill="#eef3fa" />
-              <rect x="3" y="4" width="9" height="1" fill="#eef3fa" />
-              <rect x="0" y="5" width="12" height="1" fill="#eef3fa" />
-              <rect x="0" y="6" width="12" height="1" fill="#9aa7bd" />
-              <g fill="#3ce6a4">
-                <rect x="-2" y="-1" width="3" height="1" />
-                <rect x="0" y="0" width="3" height="1" />
-                <rect x="2" y="1" width="3" height="1" />
-                <rect x="4" y="2" width="3" height="1" />
-                <rect x="6" y="3" width="3" height="1" />
-                <rect x="8" y="4" width="3" height="1" />
-                <rect x="10" y="5" width="3" height="1" />
-                <rect x="12" y="6" width="3" height="1" />
-              </g>
-            </svg>
-            NOCAP
-          </a>
-          <div className="foot-links">
-            <a href="#demo">Demo</a>
-            <a href="#wallets">Wallets</a>
-            <a href="#integrate">Integrate</a>
-            <a href="#api">API Docs</a>
+        <div className="wrap">
+          <div className="foot">
+            <span className="brand">
+              <svg width="22" height="12" viewBox="-4 -2 22 11" shapeRendering="crispEdges" aria-hidden="true">
+                <g fill="#eef3fa">
+                  <rect x="5" y="0" width="5" height="1" /><rect x="4" y="1" width="7" height="1" />
+                  <rect x="3" y="2" width="9" height="1" /><rect x="3" y="3" width="9" height="1" />
+                  <rect x="3" y="4" width="9" height="1" /><rect x="0" y="5" width="12" height="1" />
+                </g>
+                <rect x="0" y="6" width="12" height="1" fill="#9aa7bd" />
+                <g fill="#3ce6a4">
+                  <rect x="-2" y="-1" width="3" height="1" /><rect x="0" y="0" width="3" height="1" />
+                  <rect x="2" y="1" width="3" height="1" /><rect x="4" y="2" width="3" height="1" />
+                  <rect x="6" y="3" width="3" height="1" /><rect x="8" y="4" width="3" height="1" />
+                  <rect x="10" y="5" width="3" height="1" /><rect x="12" y="6" width="3" height="1" />
+                </g>
+              </svg>
+              NOCAP
+            </span>
+            <div className="foot-links">
+              <a href="#api">Docs</a>
+              <a href="#track">API status</a>
+              <a href="#" aria-disabled="true">Telegram</a>
+              <a href="#" aria-disabled="true">X</a>
+              <a href="#integrate">Extension</a>
+            </div>
           </div>
-        </div>
-        <div className="wrap font-mono">
-          <div className="foot-note">&copy; {new Date().getFullYear()} NOCAP. All rights reserved. Traced using Solana connections.</div>
+          <p className="foot-note">&copy; 2026 NOCAP · KNOW BEFORE YOU APE · CONCEPT BUILD, NOT FINANCIAL ADVICE</p>
         </div>
       </footer>
     </>
