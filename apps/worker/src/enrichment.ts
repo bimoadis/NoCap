@@ -12,7 +12,7 @@ dotenv.config();
 dotenv.config({ path: '../../.env' });
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const RPC_ENDPOINT = process.env.RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com';
+const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
 
 const redisUrl = new URL(REDIS_URL);
 const connectionOptions: any = {
