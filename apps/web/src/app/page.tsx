@@ -423,7 +423,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (logEndRef.current) {
+    if (logs.length > 0 && logEndRef.current) {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs]);
