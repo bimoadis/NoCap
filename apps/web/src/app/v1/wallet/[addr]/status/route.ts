@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { Redis } from 'ioredis';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { db, walletProfiles } from '@nocap/db';
+import { eq } from 'drizzle-orm';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -55,6 +57,17 @@ export async function GET(
       }
     }
 
+    // 3. Check if wallet profile exists in database
+    let isFound = false;
+    try {
+      const profile = await db.query.walletProfiles.findFirst({
+        where: eq(walletProfiles.address, addr),
+      });
+      isFound = !!profile;
+    } catch (e) {
+      console.warn(`[Wallet Status] Failed to query wallet profile for ${addr} from DB:`, e);
+    }
+
     const burnTokensThreshold = 1000;
     const hasAccess = balance >= burnTokensThreshold;
 
@@ -63,7 +76,7 @@ export async function GET(
         connected: true,
         wallet: addr,
         serverNow: Date.now(),
-        found: true,
+        found: isFound,
         access: hasAccess,
         accessUntil: 0,
         spins: spins,
