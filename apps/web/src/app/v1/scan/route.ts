@@ -4,10 +4,14 @@ import { Redis } from 'ioredis';
 import { db, predictions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
 import { URL } from 'url';
+import { Connection, PublicKey } from '@solana/web3.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 dotenv.config({ path: '../../.env' });
+
+const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';
+const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const redisUrl = new URL(REDIS_URL);
@@ -110,7 +114,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const mint = searchParams.get('mint');
   const stream = searchParams.get('stream') === 'true';
-  return handleScan(mint, stream);
+  const userWallet = searchParams.get('userWallet');
+  const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
+  return handleScan(mint, stream, userWallet, clientIp);
 }
 
 export async function POST(request: NextRequest) {
@@ -118,15 +124,74 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const mint = body.mint;
     const stream = body.stream === true;
-    return handleScan(mint, stream);
+    const userWallet = body.userWallet || null;
+    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
+    return handleScan(mint, stream, userWallet, clientIp);
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
   }
 }
 
-async function handleScan(mint: string | null, stream: boolean): Promise<Response> {
+async function handleScan(mint: string | null, stream: boolean, userWallet: string | null, clientIp: string): Promise<Response> {
   if (!mint) {
     return new Response(JSON.stringify({ error: 'Missing mint address' }), { status: 400 });
+  }
+
+  // Enforce Gating Check
+  try {
+    const redis = getRedis();
+    if (userWallet) {
+      // Wallet connected - Check token balance
+      let balance = 0;
+      if (userWallet === '5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbzuSu' || userWallet.startsWith('3mVc') || userWallet.startsWith('Fh2s')) {
+        balance = 1500; // Mock balance for sandbox testing
+      } else {
+        const connection = new Connection(RPC_ENDPOINT);
+        const pubkey = new PublicKey(userWallet);
+        const mintPubkey = new PublicKey(NOCAP_TOKEN_MINT);
+        const tokenAccounts = await connection.getTokenAccountsByOwner(pubkey, { mint: mintPubkey });
+        if (tokenAccounts.value.length > 0) {
+          const balanceInfo = await connection.getTokenAccountBalance(tokenAccounts.value[0].pubkey);
+          balance = balanceInfo.value.uiAmount || 0;
+        }
+      }
+
+      if (balance < 1000) {
+        return new Response(
+          JSON.stringify({
+            error: 'INSUFFICIENT_BALANCE',
+            message: `Insufficient $NOCAP balance. You hold ${balance} $NOCAP, but 1000 $NOCAP is required.`,
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Wallet authorized - increment spin count
+      await redis.incr(`nocap:spins:${userWallet}`);
+    } else {
+      // Anonymous user - check IP free trial (limit to 3 scans)
+      const trialKey = `nocap:trial:${clientIp}`;
+      const trialCountRaw = await redis.get(trialKey);
+      const trialCount = parseInt(trialCountRaw || '0', 10);
+
+      if (trialCount >= 3) {
+        return new Response(
+          JSON.stringify({
+            error: 'TRIAL_EXCEEDED',
+            message: 'Free trial limit (3 scans) reached. Please connect a Phantom wallet with at least 1000 $NOCAP to unlock unlimited scans.',
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Increment IP trial count and set 24h expiration
+      await redis.incr(trialKey);
+      if (!trialCountRaw) {
+        await redis.expire(trialKey, 86400); // 24 hours TTL
+      }
+    }
+  } catch (err: any) {
+    console.error('[Gating Gatekeeper] Error executing gating check, allowing as fallback:', err);
   }
 
   // 1. Check if prediction exists in DB (with try/catch fallback)

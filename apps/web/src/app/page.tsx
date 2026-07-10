@@ -66,6 +66,59 @@ export default function Home() {
   const timersRef = useRef<NodeJS.Timeout[]>([]);
   const logEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Wallet & Gating States
+  const [walletAddr, setWalletAddr] = useState<string | null>(null);
+  const [walletStatus, setWalletStatus] = useState<any>(null);
+  const [showGateModal, setShowGateModal] = useState<boolean>(false);
+  const [anonScans, setAnonScans] = useState<number>(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedWallet = localStorage.getItem('nocap_connected_wallet');
+      if (savedWallet) {
+        setWalletAddr(savedWallet);
+        fetchWalletStatus(savedWallet);
+      }
+      const savedAnon = parseInt(localStorage.getItem('nocap_anon_scans') || '0', 10);
+      setAnonScans(savedAnon);
+    }
+  }, []);
+
+  const fetchWalletStatus = async (addr: string) => {
+    try {
+      const res = await fetch(`/v1/wallet/${addr}/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setWalletStatus(data);
+      }
+    } catch (err) {
+      console.error('Error fetching wallet status:', err);
+    }
+  };
+
+  const connectWallet = async () => {
+    try {
+      const provider = (window as any).solana;
+      if (provider?.isPhantom) {
+        const response = await provider.connect();
+        const addr = response.publicKey.toString();
+        setWalletAddr(addr);
+        localStorage.setItem('nocap_connected_wallet', addr);
+        await fetchWalletStatus(addr);
+      } else {
+        alert('Phantom Wallet not found. Please install the Phantom Extension.');
+      }
+    } catch (err) {
+      console.error('Wallet connection failed:', err);
+    }
+  };
+
+  const disconnectWallet = () => {
+    setWalletAddr(null);
+    setWalletStatus(null);
+    localStorage.removeItem('nocap_connected_wallet');
+  };
+
   // Pre-defined scenarios mock data
   const fgBundle = () => (
     <div className="flex flex-col gap-2">
@@ -252,6 +305,20 @@ export default function Home() {
     const mintStr = customMint.trim();
     resetUI();
 
+    // Check Gating Limits on Client Side
+    if (walletAddr) {
+      if (walletStatus && !walletStatus.access) {
+        setShowGateModal(true);
+        return;
+      }
+    } else {
+      const savedAnon = parseInt(localStorage.getItem('nocap_anon_scans') || '0', 10);
+      if (savedAnon >= 3) {
+        setShowGateModal(true);
+        return;
+      }
+    }
+
     if (mintStr !== '') {
       // Connect to Live Next.js SSE Endpoint
       setScanLabel('SCANNING · LIVE API STREAM');
@@ -263,7 +330,7 @@ export default function Home() {
         return next;
       });
 
-      const url = `/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true`;
+      const url = `/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true${walletAddr ? `&userWallet=${walletAddr}` : ''}`;
       const es = new EventSource(url);
       activeESRef.current = es;
 
@@ -343,6 +410,15 @@ export default function Home() {
           } else {
             addLog('g', 'no bundle / extraction patterns matched');
             addLog('k', `confidence ${data.confidence} · verdict ready`);
+          }
+
+          // Increment anonymous scan count on successful client-side validation
+          if (!walletAddr) {
+            const nextAnon = anonScans + 1;
+            setAnonScans(nextAnon);
+            localStorage.setItem('nocap_anon_scans', nextAnon.toString());
+          } else {
+            fetchWalletStatus(walletAddr);
           }
 
           const liveScenario = {
@@ -864,7 +940,15 @@ export default function Home() {
             <a href="#integrate">Integrate</a>
             <a href="#api">API</a>
           </div>
-          <a className="btn btn-primary btn-nav" href="#api">Get API access</a>
+          {walletAddr ? (
+            <button className="btn btn-ghost btn-nav font-mono text-[11px] border border-line" onClick={disconnectWallet} style={{ textTransform: 'none' }}>
+              {walletAddr.substring(0, 4)}...{walletAddr.substring(walletAddr.length - 4)} (DISCONNECT)
+            </button>
+          ) : (
+            <button className="btn btn-primary btn-nav" onClick={connectWallet}>
+              CONNECT PHANTOM
+            </button>
+          )}
         </div>
       </nav>
 
@@ -944,20 +1028,31 @@ export default function Home() {
                 </div>
                 <span className="term-title">nocap scan · engine v1</span>
                 <div className="term-actions">
-                  <input
-                    type="text"
-                    id="caInput"
-                    placeholder="Paste Mint Address..."
-                    className="ca-input"
-                    value={customMint}
-                    onChange={(e) => {
-                      setCustomMint(e.target.value);
-                      if (e.target.value.trim() !== '') {
-                        // Clear active styling of presets
-                        setCurrentScenario(-1);
-                      }
-                    }}
-                  />
+                  <div className="flex flex-col md:flex-row items-center gap-2" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="text"
+                      id="caInput"
+                      placeholder="Paste Mint Address..."
+                      className="ca-input"
+                      value={customMint}
+                      onChange={(e) => {
+                        setCustomMint(e.target.value);
+                        if (e.target.value.trim() !== '') {
+                          // Clear active styling of presets
+                          setCurrentScenario(-1);
+                        }
+                      }}
+                    />
+                    <div className="text-[10px] font-mono text-[#8494b0] mr-2" style={{ fontSize: '10px', color: '#8494b0', whiteSpace: 'nowrap' }}>
+                      {walletAddr ? (
+                        <span>
+                          <span className="text-[#83d9ff]" style={{ color: '#83d9ff', fontWeight: 'bold' }}>{walletAddr.substring(0, 4)}...{walletAddr.substring(walletAddr.length - 4)}</span> | {walletStatus?.access ? <span className="text-[#3ce6a4]" style={{ color: '#3ce6a4', fontWeight: 'bold' }}>UNLIMITED ACCESS</span> : <span className="text-[#ff5472]" style={{ color: '#ff5472', fontWeight: 'bold' }}>ACCESS RESTRICTED (Need 1k $NOCAP)</span>}
+                        </span>
+                      ) : (
+                        <span>TRIAL: <span className="text-[#f2b544]" style={{ color: '#f2b544', fontWeight: 'bold' }}>{Math.max(0, 3 - anonScans)}/3 SCANS</span> LEFT</span>
+                      )}
+                    </div>
+                  </div>
                   <button
                     className={`scn ${currentScenario === 0 ? 'active' : ''}`}
                     onClick={() => selectScenario(0)}
@@ -1428,6 +1523,73 @@ export default function Home() {
           <p className="foot-note">&copy; 2026 NOCAP · KNOW BEFORE YOU APE · CONCEPT BUILD, NOT FINANCIAL ADVICE</p>
         </div>
       </footer>
+
+      {showGateModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '24px',
+        }}>
+          <div style={{
+            backgroundColor: '#070a13',
+            border: '1px solid rgba(132, 148, 176, 0.2)',
+            borderRadius: '12px',
+            maxWidth: '440px',
+            width: '100%',
+            padding: '32px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0,
+              height: '3px',
+              background: 'linear-gradient(90deg, #ff5470 0%, #f2b544 50%, #83d9ff 100%)',
+            }}></div>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: 'bold',
+              color: '#eef3fa',
+              marginBottom: '12px',
+              letterSpacing: '1px',
+            }}>ACCESS RESTRICTED</h3>
+            <p style={{
+              fontSize: '14px',
+              color: '#8494b0',
+              lineHeight: '1.6',
+              marginBottom: '24px',
+            }}>
+              You have used all <b>3 free trial scans</b>. To continue running real-time blockchain investigations, connect a Phantom wallet holding at least <b>1,000 $NOCAP</b>.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  connectWallet();
+                  setShowGateModal(false);
+                }}
+                style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold' }}
+              >
+                CONNECT PHANTOM WALLET
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowGateModal(false)}
+                style={{ width: '100%', padding: '12px', borderRadius: '6px', color: '#8494b0' }}
+              >
+                DISMISS
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
