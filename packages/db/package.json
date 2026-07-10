@@ -1,0 +1,22 @@
+{
+  "name": "@nocap/db",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/client.js",
+  "types": "./dist/client.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "db:generate": "drizzle-kit generate:pg",
+    "db:migrate": "ts-node src/migrate.ts",
+    "db:seed": "ts-node src/seed.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.29.3",
+    "pg": "^8.11.3",
+    "dotenv": "^16.4.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.20.14",
+    "@types/pg": "^8.11.0"
+  }
+}

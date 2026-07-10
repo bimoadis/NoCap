@@ -1,0 +1,23 @@
+{
+  "name": "@nocap/worker",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/ingestor.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "node dist/ingestor.js"
+  },
+  "dependencies": {
+    "@nocap/core": "workspace:*",
+    "@nocap/db": "workspace:*",
+    "@solana/web3.js": "^1.89.1",
+    "drizzle-orm": "^0.29.3",
+    "bullmq": "^5.1.9",
+    "ioredis": "^5.3.2",
+    "ws": "^8.16.0",
+    "dotenv": "^16.4.1"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "nocap-monorepo",
+  "version": "1.0.0",
+  "description": "NOCAP - Real-time Wallet Intelligence Layer",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:api": "pnpm --filter @nocap/api dev",
+    "dev:worker": "pnpm --filter @nocap/worker dev",
+    "db:migrate": "pnpm --filter @nocap/db db:migrate",
+    "db:seed": "pnpm --filter @nocap/db db:seed",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.11.0"
+  }
+}
