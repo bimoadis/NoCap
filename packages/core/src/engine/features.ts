@@ -44,6 +44,7 @@ export interface ComputedFeatures {
     socials_exist: boolean;
   };
   known_bad_overlap: number;
+  cluster_dominance: number;
 }
 
 // Helpers
@@ -66,6 +67,7 @@ export function computeFeatures(ctx: FeatureEvaluationContext): ComputedFeatures
       dev_history: { launches: 0, dead_under_10m_ratio: 0 },
       dev_commitment: { dev_holds_at_trade_20: false, socials_exist: false },
       known_bad_overlap: 0,
+      cluster_dominance: 0,
     };
   }
 
@@ -143,6 +145,15 @@ export function computeFeatures(ctx: FeatureEvaluationContext): ComputedFeatures
     }
   }
 
+  // 9. cluster_dominance: total proportion of buyers in private parent clusters of size >= 2
+  let clusterDominanceCount = 0;
+  for (const parent in parentGroups) {
+    if (parentGroups[parent] >= 2) {
+      clusterDominanceCount += parentGroups[parent];
+    }
+  }
+  const cluster_dominance = clusterDominanceCount / totalBuyers;
+
   return {
     funding_parent_share,
     deployer_funded,
@@ -155,5 +166,6 @@ export function computeFeatures(ctx: FeatureEvaluationContext): ComputedFeatures
     },
     dev_commitment,
     known_bad_overlap: badOverlapCount,
+    cluster_dominance,
   };
 }

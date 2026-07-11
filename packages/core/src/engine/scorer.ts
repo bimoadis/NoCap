@@ -27,7 +27,7 @@ export interface ScorerVerdictResult {
 export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerThresholds, tradeCount: number = 20): ScorerVerdictResult {
   const reasons: ScorerVerdictReason[] = [];
   let scoreSum = 0;
-  const maxScorePossible = 31; // 5 + 5 + 5 + 4 + 4 + 3 + 3 + 2
+  const maxScorePossible = 36; // 5 + 5 + 5 + 4 + 4 + 3 + 3 + 2 + 5 (added CLUSTER_DOMINANCE)
 
   // Rule 1: SHARED_FUNDING_PARENT (Weight: 5) - Critical
   if (features.funding_parent_share >= 0.60) {
@@ -110,16 +110,26 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
     });
   }
 
+  // Rule 9: CLUSTER_DOMINANCE (Weight: 5) - Critical
+  if (features.cluster_dominance >= 0.70) {
+    scoreSum += 5;
+    reasons.push({
+      code: 'CLUSTER_DOMINANCE',
+      text: `Coordinated clusters dominate ${Math.round(features.cluster_dominance * 100)}% of initial buys. Extreme bundling pattern.`,
+      severity: 'high'
+    });
+  }
+
   const riskScore = Math.round((scoreSum / maxScorePossible) * 100);
 
   let verdict: 'CAP' | 'NO CAP' = 'NO CAP';
   let subclass: 'extraction' | 'organic' | 'coordinated' = 'organic';
 
   // Verdict Resolution based on Risk Score
-  if (riskScore >= 60 || features.funding_parent_share >= 0.60) {
+  if (riskScore >= 60 || features.funding_parent_share >= 0.60 || features.cluster_dominance >= 0.70) {
     verdict = 'CAP';
     subclass = 'extraction';
-  } else if (riskScore >= 30 || features.funding_parent_share >= 0.20) {
+  } else if (riskScore >= 30 || features.funding_parent_share >= 0.20 || features.cluster_dominance >= 0.30) {
     verdict = 'NO CAP';
     subclass = 'coordinated';
     reasons.push({

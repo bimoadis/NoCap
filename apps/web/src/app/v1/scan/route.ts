@@ -104,7 +104,7 @@ async function traceFundingParent(address: string, creator: string): Promise<{ f
               where: eq(walletProfiles.address, funder),
             });
           } catch (e) {}
-          const isCex = dbFunder?.funderType === 'cex' || funder.startsWith('5nGa');
+          const isCex = dbFunder?.funderType === 'cex' || funder === '5nGaJJ3tWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71pW';
           return {
             funder,
             funderType: isCex ? 'cex' : (funder === creator ? 'deployer' : 'organic_buyer'),
