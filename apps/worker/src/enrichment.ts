@@ -1,6 +1,10 @@
 import { Worker, Job } from 'bullmq';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first');
+
 import { Connection, PublicKey } from '@solana/web3.js';
 import { db, regimeConfigs, walletProfiles, predictions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
