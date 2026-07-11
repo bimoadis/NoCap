@@ -79,9 +79,12 @@ export default function Home() {
       if (savedWallet) {
         setWalletAddr(savedWallet);
         fetchWalletStatus(savedWallet);
+        const walletScansKey = `nocap_wallet_scans_${savedWallet}`;
+        const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
+        setAnonScans(walletScans);
+      } else {
+        setAnonScans(0);
       }
-      const savedAnon = parseInt(localStorage.getItem('nocap_anon_scans') || '0', 10);
-      setAnonScans(savedAnon);
     }
   }, []);
 
@@ -106,6 +109,9 @@ export default function Home() {
         setWalletAddr(addr);
         localStorage.setItem('nocap_connected_wallet', addr);
         await fetchWalletStatus(addr);
+        const walletScansKey = `nocap_wallet_scans_${addr}`;
+        const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
+        setAnonScans(walletScans);
       } else {
         alert('Phantom Wallet not found. Please install the Phantom Extension.');
       }
@@ -117,6 +123,7 @@ export default function Home() {
   const disconnectWallet = () => {
     setWalletAddr(null);
     setWalletStatus(null);
+    setAnonScans(0);
     localStorage.removeItem('nocap_connected_wallet');
   };
 
@@ -323,17 +330,17 @@ export default function Home() {
     resetUI();
 
     // Check Gating Limits on Client Side
-    if (walletAddr) {
-      if (walletStatus && !walletStatus.access) {
-        setShowGateModal(true);
-        return;
-      }
-    } else {
-      const savedAnon = parseInt(localStorage.getItem('nocap_anon_scans') || '0', 10);
-      if (savedAnon >= 3) {
-        setShowGateModal(true);
-        return;
-      }
+    if (!walletAddr) {
+      alert('Please connect your Phantom wallet first to unlock your 3 free scans.');
+      connectWallet();
+      return;
+    }
+
+    const walletScansKey = `nocap_wallet_scans_${walletAddr}`;
+    const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
+    if (walletScans >= 3 && (!walletStatus || !walletStatus.access)) {
+      setShowGateModal(true);
+      return;
     }
 
     if (mintStr !== '') {
@@ -430,12 +437,13 @@ export default function Home() {
             addLog('k', `confidence ${data.confidence} · verdict ready`);
           }
 
-          // Increment anonymous scan count on successful client-side validation
-          if (!walletAddr) {
-            const nextAnon = anonScans + 1;
-            setAnonScans(nextAnon);
-            localStorage.setItem('nocap_anon_scans', nextAnon.toString());
-          } else {
+          // Increment scan count on successful client-side validation
+          if (walletAddr) {
+            const walletScansKey = `nocap_wallet_scans_${walletAddr}`;
+            const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
+            const nextScans = walletScans + 1;
+            localStorage.setItem(walletScansKey, nextScans.toString());
+            setAnonScans(nextScans);
             fetchWalletStatus(walletAddr);
           }
 
@@ -1065,27 +1073,13 @@ export default function Home() {
                     <div className="text-[10px] font-mono text-[#8494b0] mr-2" style={{ fontSize: '10px', color: '#8494b0', whiteSpace: 'nowrap' }}>
                       {walletAddr ? (
                         <span>
-                          <span className="text-[#83d9ff]" style={{ color: '#83d9ff', fontWeight: 'bold' }}>{walletAddr.substring(0, 4)}...{walletAddr.substring(walletAddr.length - 4)}</span> | {walletStatus?.access ? <span className="text-[#3ce6a4]" style={{ color: '#3ce6a4', fontWeight: 'bold' }}>UNLIMITED ACCESS</span> : <span className="text-[#ff5472]" style={{ color: '#ff5472', fontWeight: 'bold' }}>ACCESS RESTRICTED (Need 1k $NOCAP)</span>}
+                          <span className="text-[#83d9ff]" style={{ color: '#83d9ff', fontWeight: 'bold' }}>{walletAddr.substring(0, 4)}...{walletAddr.substring(walletAddr.length - 4)}</span> | {walletStatus?.access ? <span className="text-[#3ce6a4]" style={{ color: '#3ce6a4', fontWeight: 'bold' }}>UNLIMITED ACCESS</span> : <span>TRIAL: <span className="text-[#f2b544]" style={{ color: '#f2b544', fontWeight: 'bold' }}>{Math.max(0, 3 - anonScans)}/3 SCANS</span> LEFT</span>}
                         </span>
                       ) : (
-                        <span>TRIAL: <span className="text-[#f2b544]" style={{ color: '#f2b544', fontWeight: 'bold' }}>{Math.max(0, 3 - anonScans)}/3 SCANS</span> LEFT</span>
+                        <span className="text-[#ff5472]" style={{ color: '#ff5472', fontWeight: 'bold' }}>CONNECT WALLET TO SCAN</span>
                       )}
                     </div>
                   </div>
-                  <button
-                    className={`scn ${currentScenario === 0 ? 'active' : ''}`}
-                    onClick={() => selectScenario(0)}
-                    type="button"
-                  >
-                    BUNDLED LAUNCH
-                  </button>
-                  <button
-                    className={`scn ${currentScenario === 1 ? 'active' : ''}`}
-                    onClick={() => selectScenario(1)}
-                    type="button"
-                  >
-                    ORGANIC LAUNCH
-                  </button>
                   <button className="run" onClick={runScan} type="button">
                     RUN SCAN
                   </button>
