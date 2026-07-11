@@ -8,8 +8,17 @@ import dns from 'dns';
 
 dns.setDefaultResultOrder('ipv4first');
 
+import path from 'path';
+import fs from 'fs';
+
 dotenv.config();
-dotenv.config({ path: '../../.env' });
+const workspaceEnv = path.resolve(process.cwd(), '.env');
+const parentEnv = path.resolve(process.cwd(), '../../.env');
+if (fs.existsSync(workspaceEnv)) {
+  dotenv.config({ path: workspaceEnv });
+} else if (fs.existsSync(parentEnv)) {
+  dotenv.config({ path: parentEnv });
+}
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';

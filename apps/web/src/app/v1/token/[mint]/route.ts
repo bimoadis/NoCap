@@ -3,8 +3,17 @@ import { db, predictions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
 import dotenv from 'dotenv';
 
+import path from 'path';
+import fs from 'fs';
+
 dotenv.config();
-dotenv.config({ path: '../../.env' });
+const workspaceEnv = path.resolve(process.cwd(), '.env');
+const parentEnv = path.resolve(process.cwd(), '../../.env');
+if (fs.existsSync(workspaceEnv)) {
+  dotenv.config({ path: workspaceEnv });
+} else if (fs.existsSync(parentEnv)) {
+  dotenv.config({ path: parentEnv });
+}
 
 export async function GET(
   request: NextRequest,
