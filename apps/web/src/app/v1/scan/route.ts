@@ -459,66 +459,7 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
     console.error('[Gating Gatekeeper] Error executing gating check, allowing as fallback:', err);
   }
 
-  // 1. Check if prediction exists in DB (with try/catch fallback)
-  let cachedPrediction = null;
-  try {
-    cachedPrediction = await db.query.predictions.findFirst({
-      where: eq(predictions.mint, mint),
-    });
-  } catch (e) {
-    console.warn('[Next.js API] Database connection refused. Running in sandbox-degraded mode.');
-  }
-
-  if (cachedPrediction) {
-    if (stream) {
-      const responseStream = new TransformStream();
-      const writer = responseStream.writable.getWriter();
-      const encoder = new TextEncoder();
-
-      (async () => {
-        const mockSteps = [
-          { step: 'deployer', pct: 10 },
-          { step: 'buyers', pct: 30 },
-          { step: 'funding_graph', pct: 50 },
-          { step: 'clustering', pct: 70 },
-          { step: 'scoring', pct: 90 },
-        ];
-
-        for (const s of mockSteps) {
-          await writer.write(encoder.encode(`event: progress\ndata: ${JSON.stringify(s)}\n\n`));
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-
-        const finalVerdict = {
-          verdict: cachedPrediction.verdict,
-          confidence: cachedPrediction.confidence,
-          subclass: cachedPrediction.subclass,
-          reason: (cachedPrediction.reasons as any)[0]?.text || '',
-        };
-
-        await writer.write(encoder.encode(`event: verdict\ndata: ${JSON.stringify(finalVerdict)}\n\n`));
-        await writer.close();
-      })();
-
-      return new Response(responseStream.readable, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    } else {
-      return new Response(JSON.stringify({
-        mint: cachedPrediction.mint,
-        verdict: cachedPrediction.verdict,
-        confidence: cachedPrediction.confidence,
-        subclass: cachedPrediction.subclass,
-        reasons: cachedPrediction.reasons,
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  }
+  // Disable caching to ensure real-time evaluation with updated scoring weights
 
   // 2. Trigger on-demand inline scan execution
   const redis = getRedis();
