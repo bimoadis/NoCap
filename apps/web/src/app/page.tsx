@@ -46,7 +46,7 @@ export default function Home() {
   // Verdict UI Card State
   const [verdictVisible, setVerdictVisible] = useState<boolean>(false);
   const [verdictIn, setVerdictIn] = useState<boolean>(false);
-  const [verdictType, setVerdictType] = useState<'cap' | 'nocap'>('cap');
+  const [verdictType, setVerdictType] = useState<'cap' | 'nocap' | 'coordinated'>('cap');
   const [verdictMint, setVerdictMint] = useState<string>('');
   const [verdictTime, setVerdictTime] = useState<string>('');
   const [verdictConf, setVerdictConf] = useState<number>(0);
@@ -286,8 +286,23 @@ export default function Home() {
 
   const showVerdict = (scenario: typeof presetScenarios[0] | any) => {
     setVerdictVisible(true);
-    setVerdictType(scenario.kind);
-    setVerdictWord(scenario.kind === 'cap' ? 'CAP' : 'NO CAP');
+
+    let displayType: 'cap' | 'nocap' | 'coordinated' = 'nocap';
+    let displayWord = 'NO CAP (Organic)';
+
+    if (scenario.subclass === 'extraction' || scenario.kind === 'cap') {
+      displayType = 'cap';
+      displayWord = 'CAP (Extraction)';
+    } else if (scenario.subclass === 'coordinated') {
+      displayType = 'coordinated';
+      displayWord = 'NO CAP (Coordinated)';
+    } else {
+      displayType = 'nocap';
+      displayWord = 'NO CAP (Organic)';
+    }
+
+    setVerdictType(displayType);
+    setVerdictWord(displayWord);
     setVerdictSentence(scenario.sentence);
     setVerdictMint(scenario.mint);
     setVerdictTime(scenario.time);
@@ -428,6 +443,7 @@ export default function Home() {
             mint: mintStr.substring(0, 6) + '…' + mintStr.substring(mintStr.length - 4),
             time: durationS,
             kind: data.verdict === 'CAP' ? 'cap' : 'nocap',
+            subclass: data.subclass,
             conf: Math.round(data.confidence * 100),
             verdictLevel: data.verdictLevel || 'FINAL',
             sentence: data.reasons?.[0]?.text || (data.verdict === 'CAP' ? 'Supply pattern controlled.' : 'Organic trading flow confirmed.'),

@@ -856,6 +856,11 @@ section {
   box-shadow: 0 0 60px rgba(60, 230, 164, 0.12);
 }
 
+.vcard.is-coordinated .v-chip {
+  color: var(--amber);
+  box-shadow: 0 0 60px rgba(242, 181, 68, 0.12);
+}
+
 .v-sentence {
   font-size: 16.5px;
   color: var(--ink);
@@ -896,6 +901,10 @@ section {
 
 .vcard.is-nocap .ring {
   color: var(--emerald);
+}
+
+.vcard.is-coordinated .ring {
+  color: var(--amber);
 }
 
 .ring b {
