@@ -467,8 +467,7 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
   const isOrganic = mint.startsWith('Gv3k') || mint.endsWith('pump') === false;
 
   if (!isRedisConnected) {
-    console.warn('[Next.js API] Redis connection is offline. Simulating scan progression.');
-    return runSandboxSimulation(mint, isOrganic, stream);
+    console.warn('[Next.js API] Redis connection is offline. Running real-time inline scan without gating.');
   }
 
   if (stream) {
