@@ -118,8 +118,6 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
   }
 
   const rawConfidence = scoreSum / maxScorePossible;
-  const completeness = Math.min(1, tradeCount / 20);
-  const confidence = rawConfidence * completeness;
 
   let verdictLevel: 'PRELIMINARY' | 'PROVISIONAL' | 'FINAL' = 'FINAL';
   if (tradeCount < 10) {
@@ -153,6 +151,11 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
       });
     }
   }
+
+  const completeness = Math.min(1, tradeCount / 20);
+  const confidence = verdict === 'CAP'
+    ? rawConfidence * completeness
+    : (1 - rawConfidence) * completeness;
 
   return {
     verdict,
