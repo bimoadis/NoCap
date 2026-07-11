@@ -11,7 +11,10 @@ dotenv.config({ path: '../../.env' });
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-});
+  lookup: (hostname: string, options: any, callback: any) => {
+    dns.lookup(hostname, { ...options, family: 4 }, callback);
+  },
+} as any);
 
 export const db = drizzle(pool, { schema });
 export * from './schema.js';
