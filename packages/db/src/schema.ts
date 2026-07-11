@@ -50,3 +50,15 @@ export const outcomes = pgTable('outcomes', {
   exitMetrics: jsonb('exit_metrics').default({}).notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+export const walletSessions = pgTable('wallet_sessions', {
+  wallet: varchar('wallet', { length: 44 }).primaryKey(),
+  connected: boolean('connected').default(false).notNull(),
+  access: boolean('access').default(false).notNull(),
+  accessUntil: integer('access_until').default(0).notNull(),
+  spins: integer('spins').default(0).notNull(),
+  burns: integer('burns').default(0).notNull(),
+  freeScans: integer('free_scans').default(3).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

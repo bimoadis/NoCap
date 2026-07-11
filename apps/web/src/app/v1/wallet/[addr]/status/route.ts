@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { Redis } from 'ioredis';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { db, walletProfiles } from '@nocap/db';
+import { db, walletProfiles, walletSessions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import dns from 'dns';
@@ -87,6 +87,33 @@ export async function GET(
 
     const burnTokensThreshold = 1000;
     const hasAccess = balance >= burnTokensThreshold;
+    const freeScansLeft = Math.max(0, 3 - spins);
+
+    // Save/Update session data in Supabase wallet_sessions table
+    try {
+      await db.insert(walletSessions).values({
+        wallet: addr,
+        connected: true,
+        access: hasAccess,
+        accessUntil: 0,
+        spins: spins,
+        burns: 0,
+        freeScans: freeScansLeft,
+      })
+      .onConflictDoUpdate({
+        target: walletSessions.wallet,
+        set: {
+          connected: true,
+          access: hasAccess,
+          spins: spins,
+          freeScans: freeScansLeft,
+          updatedAt: new Date(),
+        }
+      });
+      console.log(`[Wallet Status] Updated wallet session for ${addr} in Supabase!`);
+    } catch (e) {
+      console.warn(`[Wallet Status] Failed to save wallet session for ${addr} to Supabase:`, e);
+    }
 
     return new Response(
       JSON.stringify({
@@ -100,7 +127,7 @@ export async function GET(
         burns: 0,
         mint: NOCAP_TOKEN_MINT,
         burnTokens: burnTokensThreshold,
-        freeScans: Math.max(0, 3 - spins),
+        freeScans: freeScansLeft,
       }),
       {
         status: 200,
