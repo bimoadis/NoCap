@@ -230,10 +230,13 @@ async function performInlineScan(
 
     for (const parent in parentGroups) {
       if (parentGroups[parent].length >= 2) {
+        const firstBuyer = parentGroups[parent][0];
+        const isCex = fundingSources[firstBuyer]?.funderType === 'cex';
         await writer.write(encoder.encode(`event: cluster\ndata: ${JSON.stringify({
           id: 'C114',
           wallets: parentGroups[parent].length,
           parent,
+          isCex,
         })}\n\n`));
       }
     }

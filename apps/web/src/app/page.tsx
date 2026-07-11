@@ -415,7 +415,11 @@ export default function Home() {
         try {
           const data = JSON.parse(e.data);
           setDetectedClusters((prev) => [...prev, data]);
-          addLog('a', `cluster resolved: ${data.wallets} wallets linked to single parent`);
+          if (data.isCex) {
+            addLog('g', `cluster resolved: ${data.wallets} wallets linked to CEX parent (benign)`);
+          } else {
+            addLog('a', `cluster resolved: ${data.wallets} wallets linked to single parent`);
+          }
         } catch (err) {}
       });
 
@@ -1176,15 +1180,17 @@ export default function Home() {
                                       {detectedClusters.map((c, idx) => {
                                         const cx = 40 + idx * 70;
                                         const cy = 70;
+                                        const color = c.isCex ? '#3ce6a4' : '#ff5470';
+                                        const strokeColor = c.isCex ? 'rgba(60,230,164,0.4)' : 'rgba(255,84,112,0.4)';
                                         return (
                                           <g key={`dc-svg-${idx}`}>
-                                            <circle cx={cx} cy={cy} r="6" fill="#ff5470" />
+                                            <circle cx={cx} cy={cy} r="6" fill={color} />
                                             {Array.from({ length: Math.min(10, c.wallets) }).map((_, i) => {
                                               const y = 12 + i * 12;
                                               return (
                                                 <React.Fragment key={`dc-svg-l-${i}`}>
-                                                  <line x1={cx} y1={cy} x2="250" y2={y} stroke="rgba(255,84,112,0.4)" strokeWidth="1" />
-                                                  <circle cx="250" cy={y} r="2.5" fill="#ff5470" />
+                                                  <line x1={cx} y1={cy} x2="250" y2={y} stroke={strokeColor} strokeWidth="1" />
+                                                  <circle cx="250" cy={y} r="2.5" fill={color} />
                                                 </React.Fragment>
                                               );
                                             })}
@@ -1195,7 +1201,7 @@ export default function Home() {
                                     <div className="text-xs text-[#8494b0] mt-2">
                                       {detectedClusters.map((c, i) => (
                                         <div key={`dctxt-${i}`} className="mt-1" style={{ fontSize: '11px' }}>
-                                          • Cluster resolved: <span className="text-[#ff5470]" style={{ color: '#ff5470', fontWeight: 'bold' }}>{c.wallets} wallets</span> linked to parent <span className="font-mono text-[#83d9ff]" style={{ color: '#83d9ff' }}>{c.parent.substring(0, 6)}...{c.parent.substring(c.parent.length - 4)}</span>
+                                          • Cluster resolved: <span className="font-bold" style={{ color: c.isCex ? '#3ce6a4' : '#ff5470' }}>{c.wallets} wallets</span> linked to parent <span className="font-mono text-[#83d9ff]" style={{ color: '#83d9ff' }}>{c.parent.substring(0, 6)}...{c.parent.substring(c.parent.length - 4)}</span> {c.isCex && <span className="text-[#3ce6a4] font-semibold">(CEX hot wallet - benign)</span>}
                                         </div>
                                       ))}
                                     </div>
