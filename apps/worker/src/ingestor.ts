@@ -5,8 +5,15 @@ import dotenv from 'dotenv';
 import { parsePumpTransaction, PUMP_PROGRAM_ID } from '@nocap/core';
 import './enrichment.js';
 
-dotenv.config();
-dotenv.config({ path: '../../.env' });
+import fs from 'fs';
+import path from 'path';
+
+const localEnv = path.resolve(process.cwd(), '../../.env');
+if (fs.existsSync(localEnv)) {
+  dotenv.config({ path: localEnv });
+} else {
+  dotenv.config();
+}
 
 function extractApiKey(key: string): string {
   if (!key) return '';

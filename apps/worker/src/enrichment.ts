@@ -8,8 +8,15 @@ import { computeFeatures, evaluateVerdict, ComputedFeatures } from '@nocap/core'
 
 import { URL } from 'url';
 
-dotenv.config();
-dotenv.config({ path: '../../.env' });
+import fs from 'fs';
+import path from 'path';
+
+const localEnv = path.resolve(process.cwd(), '../../.env');
+if (fs.existsSync(localEnv)) {
+  dotenv.config({ path: localEnv });
+} else {
+  dotenv.config();
+}
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
