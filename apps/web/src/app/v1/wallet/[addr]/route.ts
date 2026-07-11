@@ -24,27 +24,40 @@ export async function GET(
     if (!cached) {
       return new Response(JSON.stringify({
         address: addr,
-        label: 'organic trader',
-        launches: 0,
-        dead_under_10m: 0,
-        avg_extraction_sol: 0,
-        funded_snipers: 0,
-        cluster: 'none',
-        trust: 1.0,
+        tag: 'ORGANIC',
+        trustScore: 1.0,
+        stats: {
+          priorRugs: 0,
+          priorLaunches: 0,
+          avgExtractionSol: 0,
+          fundedSnipers: 0,
+        },
+        clusterId: 'none',
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    let tag = 'ORGANIC';
+    if ((cached.reputationFlags as string[]).includes('rug_participant') || cached.deadUnder10m >= 3) {
+      tag = 'RUGGER';
+    } else if (cached.funderType === 'cex') {
+      tag = 'CEX';
+    } else if (cached.funderType === 'deployer') {
+      tag = 'DEPLOYER';
+    }
+
     return new Response(JSON.stringify({
       address: cached.address,
-      label: cached.funderType === 'deployer' ? 'serial deployer' : 'organic trader',
-      launches: cached.launches,
-      dead_under_10m: cached.deadUnder10m,
-      avg_extraction_sol: cached.avgExtractionSol,
-      funded_snipers: cached.fundedSnipers,
-      cluster: cached.cluster || 'none',
-      trust: cached.trust,
+      tag,
+      trustScore: cached.trust,
+      stats: {
+        priorRugs: cached.deadUnder10m,
+        priorLaunches: cached.launches,
+        avgExtractionSol: cached.avgExtractionSol,
+        fundedSnipers: cached.fundedSnipers,
+      },
+      clusterId: cached.cluster || 'none',
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -53,13 +66,15 @@ export async function GET(
     const isRugger = addr.startsWith('7xKp');
     return new Response(JSON.stringify({
       address: addr,
-      label: isRugger ? 'serial deployer' : 'organic trader',
-      launches: isRugger ? 48 : 1,
-      dead_under_10m: isRugger ? 31 : 0,
-      avg_extraction_sol: isRugger ? 12.0 : 0.0,
-      funded_snipers: isRugger ? 14 : 0,
-      cluster: isRugger ? 'C114' : 'none',
-      trust: isRugger ? 0.05 : 0.92,
+      tag: isRugger ? 'RUGGER' : 'ORGANIC',
+      trustScore: isRugger ? 0.05 : 0.92,
+      stats: {
+        priorRugs: isRugger ? 31 : 0,
+        priorLaunches: isRugger ? 48 : 1,
+        avgExtractionSol: isRugger ? 12.0 : 0.0,
+        fundedSnipers: isRugger ? 14 : 0,
+      },
+      clusterId: isRugger ? 'C114' : 'none',
     }), {
       headers: { 'Content-Type': 'application/json' },
     });

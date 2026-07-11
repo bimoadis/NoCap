@@ -60,15 +60,29 @@ export async function GET(
       }
     }
 
-    // 3. Check if wallet profile exists in database
     let isFound = false;
     try {
       const profile = await db.query.walletProfiles.findFirst({
         where: eq(walletProfiles.address, addr),
       });
       isFound = !!profile;
+      
+      if (!isFound) {
+        // Automatically save new profile to Supabase
+        await db.insert(walletProfiles).values({
+          address: addr,
+          funderType: 'unknown',
+          reputationFlags: [],
+          launches: 0,
+          deadUnder10m: 0,
+          avgExtractionSol: 0,
+          fundedSnipers: 0,
+          trust: 1.0,
+        }).onConflictDoNothing();
+        isFound = true;
+      }
     } catch (e) {
-      console.warn(`[Wallet Status] Failed to query wallet profile for ${addr} from DB:`, e);
+      console.warn(`[Wallet Status] Failed to query/save wallet profile for ${addr} from DB:`, e);
     }
 
     const burnTokensThreshold = 1000;

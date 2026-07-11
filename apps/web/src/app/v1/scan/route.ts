@@ -290,7 +290,19 @@ async function performInlineScan(
         reasons: verdict.reasons,
         features,
         regimeVersion: regime.regimeVersion,
-      }).onConflictDoNothing();
+      })
+      .onConflictDoUpdate({
+        target: predictions.mint,
+        set: {
+          verdict: verdict.verdict,
+          confidence: verdict.confidence,
+          subclass: verdict.subclass,
+          reasons: verdict.reasons,
+          features,
+          regimeVersion: regime.regimeVersion,
+          createdAt: new Date(),
+        }
+      });
 
       // Trigger oracle outcome resolution instantly for development feedback
       const isRug = verdict.verdict === 'CAP';
@@ -303,7 +315,17 @@ async function performInlineScan(
         graduated,
         peakPriceSol: 1.5,
         exitMetrics: { devHoldingsRatio: isRug ? 0.05 : 0.8 },
-      }).onConflictDoNothing();
+      })
+      .onConflictDoUpdate({
+        target: outcomes.mint,
+        set: {
+          rug30m: isRug,
+          dead24h: isRug,
+          alive24h: !isRug,
+          graduated,
+          updatedAt: new Date(),
+        }
+      });
       console.log(`[ORACLE] Instant resolved outcomes for ${mint}: rug_30m=${isRug}`);
     } catch (e) {
       console.warn('[Inline Scan] Failed to save prediction/outcome to DB:', e);

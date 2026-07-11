@@ -106,6 +106,7 @@ export default function Home() {
       if (provider?.isPhantom) {
         const response = await provider.connect();
         const addr = response.publicKey.toString();
+        console.log('[NOCAP Client] Wallet connected successfully:', addr);
         setWalletAddr(addr);
         localStorage.setItem('nocap_connected_wallet', addr);
         await fetchWalletStatus(addr);
@@ -116,11 +117,12 @@ export default function Home() {
         alert('Phantom Wallet not found. Please install the Phantom Extension.');
       }
     } catch (err) {
-      console.error('Wallet connection failed:', err);
+      console.error('[NOCAP Client] Wallet connection failed:', err);
     }
   };
 
   const disconnectWallet = () => {
+    console.log('[NOCAP Client] Wallet disconnected.');
     setWalletAddr(null);
     setWalletStatus(null);
     setAnonScans(0);
@@ -344,6 +346,8 @@ export default function Home() {
     }
 
     if (mintStr !== '') {
+      console.log('[NOCAP Client] Initiating live scan for Mint:', mintStr);
+      console.log('[NOCAP Client] Active connected wallet:', walletAddr);
       // Connect to Live Next.js SSE Endpoint
       setScanLabel('SCANNING · LIVE API STREAM');
       addLog('k', `scan ${mintStr.substring(0, 8)}… · stream open`);
@@ -364,6 +368,7 @@ export default function Home() {
         try {
           const data = JSON.parse(e.data);
           const step = data.step;
+          console.log('[NOCAP Client] Progress step:', step, 'pct:', data.pct);
           if (step === 'deployer') {
             addLog('f', 'deployer identified');
             setProgressPct(10);
@@ -414,6 +419,7 @@ export default function Home() {
       es.addEventListener('cluster', (e) => {
         try {
           const data = JSON.parse(e.data);
+          console.log('[NOCAP Client] Cluster resolved:', data);
           setDetectedClusters((prev) => [...prev, data]);
           if (data.isCex) {
             addLog('g', `cluster resolved: ${data.wallets} wallets linked to CEX parent (benign)`);
@@ -426,6 +432,7 @@ export default function Home() {
       es.addEventListener('verdict', (e) => {
         try {
           const data = JSON.parse(e.data);
+          console.log('[NOCAP Client] Verdict payload received:', data);
           
           setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
           setProgressPct(100);
