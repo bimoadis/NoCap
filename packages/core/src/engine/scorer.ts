@@ -129,7 +129,7 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
   let verdict: 'CAP' | 'NO CAP' = 'NO CAP';
   let subclass: 'extraction' | 'organic' | 'coordinated' = 'organic';
 
-  if (rawConfidence >= 0.45) {
+  if (rawConfidence >= 0.45 || features.funding_parent_share >= thresholds.maxParentShare) {
     verdict = 'CAP';
     subclass = 'extraction';
   } else if (features.funding_parent_share > 0.20 || features.same_block_count >= 3) {
