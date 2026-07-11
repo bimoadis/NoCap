@@ -1,31 +1,19 @@
-import { NextRequest } from 'next/server';
-import { Redis } from 'ioredis';
 import { db, predictions } from '@nocap/db';
 import { count } from 'drizzle-orm';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
 dotenv.config();
-dotenv.config({ path: '../../.env' });
+const workspaceEnv = path.resolve(process.cwd(), '.env');
+const parentEnv = path.resolve(process.cwd(), '../../.env');
+if (fs.existsSync(workspaceEnv)) {
+  dotenv.config({ path: workspaceEnv });
+} else if (fs.existsSync(parentEnv)) {
+  dotenv.config({ path: parentEnv });
+}
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-
-export async function GET(request: NextRequest) {
-  try {
-    const redis = new Redis(REDIS_URL, { maxRetriesPerRequest: 0, connectTimeout: 1000 });
-    redis.on('error', () => {});
-    
-    const cachedStats = await redis.get('nocap:metrics:public');
-    await redis.quit();
-
-    if (cachedStats) {
-      return new Response(cachedStats, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  } catch (err) {
-    // Ignore and proceed to db/fallback
-  }
-
+export async function GET() {
   let dbCount = 0;
   try {
     const res = await db.select({ total: count() }).from(predictions);

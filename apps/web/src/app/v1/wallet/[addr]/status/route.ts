@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { Redis } from 'ioredis';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { db, walletProfiles, walletSessions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
@@ -20,7 +19,6 @@ if (fs.existsSync(workspaceEnv)) {
   dotenv.config({ path: parentEnv });
 }
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
 
@@ -37,27 +35,14 @@ export async function GET(
   try {
     let spins = 0;
     try {
-      const redis = new Redis(REDIS_URL, {
-        maxRetriesPerRequest: 0,
-        connectTimeout: 1000,
-        tls: REDIS_URL.startsWith('rediss://') ? {} : undefined,
+      const existingSession = await db.query.walletSessions.findFirst({
+        where: eq(walletSessions.wallet, addr),
       });
-      redis.on('error', () => {});
-
-      const spinsKey = `nocap:spins:${addr}`;
-      const spinsRaw = await redis.get(spinsKey);
-      spins = parseInt(spinsRaw || '0', 10);
-      await redis.quit();
+      if (existingSession) {
+        spins = existingSession.spins;
+      }
     } catch (e) {
-      console.warn(`[Wallet Status] Redis connection offline/failed, fallback to DB spins check.`);
-      try {
-        const existingSession = await db.query.walletSessions.findFirst({
-          where: eq(walletSessions.wallet, addr),
-        });
-        if (existingSession) {
-          spins = existingSession.spins;
-        }
-      } catch (dbErr) {}
+      console.warn(`[Wallet Status] Failed to query spins from DB:`, e);
     }
 
     // 2. Fetch $NOCAP Token Balance from Solana Blockchain

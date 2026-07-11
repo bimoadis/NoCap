@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { Redis } from 'ioredis';
 import { db, predictions, walletProfiles, regimeConfigs, outcomes, walletSessions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
 import { URL } from 'url';
@@ -25,22 +24,7 @@ if (fs.existsSync(workspaceEnv)) {
 const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-// Initialize lazy Redis client
-let redisClient: Redis | null = null;
-
-function getRedis() {
-  if (!redisClient) {
-    redisClient = new Redis(REDIS_URL, {
-      maxRetriesPerRequest: 0,
-      connectTimeout: 2000,
-    });
-    // Prevent unhandled rejection crashes if connection fails
-    redisClient.on('error', () => {});
-  }
-  return redisClient;
-}
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -549,14 +533,7 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
 
   // Disable caching to ensure real-time evaluation with updated scoring weights
 
-  // 2. Trigger on-demand inline scan execution
-  const redis = getRedis();
-  const isRedisConnected = redis.status === 'ready' || redis.status === 'connecting' || redis.status === 'connect';
-  const isOrganic = mint.startsWith('Gv3k') || mint.endsWith('pump') === false;
 
-  if (!isRedisConnected) {
-    console.warn('[Next.js API] Redis connection is offline. Running real-time inline scan without gating.');
-  }
 
   if (stream) {
     const responseStream = new TransformStream();
