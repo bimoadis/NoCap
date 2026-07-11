@@ -1158,6 +1158,7 @@ export default function Home() {
                         <b id="vconf">{verdictConf}%</b>
                       </div>
                       <div className="vm">
+                        RISK <b id="vrisk">{verdictConf}%</b><br />
                         MINT <b id="vmint">{verdictMint}</b><br />
                         SPEED <b id="vtime">{verdictTime}</b><br />
                         REGIME <b>REGIME W14</b>

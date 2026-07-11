@@ -120,7 +120,7 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
     });
   }
 
-  const riskScore = Math.round((scoreSum / maxScorePossible) * 100);
+  let riskScore = Math.round((scoreSum / maxScorePossible) * 100);
 
   let verdict: 'CAP' | 'NO CAP' = 'NO CAP';
   let subclass: 'extraction' | 'organic' | 'coordinated' = 'organic';
@@ -129,9 +129,11 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
   if (riskScore >= 60 || features.funding_parent_share >= 0.60 || features.cluster_dominance >= 0.70) {
     verdict = 'CAP';
     subclass = 'extraction';
+    riskScore = Math.max(riskScore, 60);
   } else if (riskScore >= 30 || features.funding_parent_share >= 0.20 || features.cluster_dominance >= 0.30) {
     verdict = 'NO CAP';
     subclass = 'coordinated';
+    riskScore = Math.max(riskScore, 30);
     reasons.push({
       code: 'COORDINATED_WARNING',
       text: 'Coordinated buying patterns detected. Trade with caution.',
@@ -156,14 +158,10 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
     verdictLevel = 'PROVISIONAL';
   }
 
-  const confidence = verdict === 'CAP'
-    ? riskScore
-    : (100 - riskScore);
-
   return {
     verdict,
     subclass,
-    confidence: confidence / 100, // Return normalized decimal (0.0 to 1.0)
+    confidence: riskScore / 100, // Return riskScore directly (0.0 to 1.0)
     reasons,
     verdictLevel,
   };
