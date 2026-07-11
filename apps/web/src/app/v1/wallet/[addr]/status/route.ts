@@ -4,6 +4,9 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { db, walletProfiles } from '@nocap/db';
 import { eq } from 'drizzle-orm';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 dotenv.config({ path: '../../.env' });

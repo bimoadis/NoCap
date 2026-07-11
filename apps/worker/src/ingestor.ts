@@ -2,6 +2,9 @@ import WebSocket from 'ws';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first');
 import { parsePumpTransaction, PUMP_PROGRAM_ID } from '@nocap/core';
 import './enrichment.js';
 

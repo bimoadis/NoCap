@@ -6,6 +6,9 @@ import { eq } from 'drizzle-orm';
 import { URL } from 'url';
 import { Connection, PublicKey } from '@solana/web3.js';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 dotenv.config({ path: '../../.env' });
