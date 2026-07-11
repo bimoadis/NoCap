@@ -26,18 +26,30 @@ export async function GET(
   }
 
   try {
-    // 1. Connect to Redis to get scan/spin counts
-    const redis = new Redis(REDIS_URL, {
-      maxRetriesPerRequest: 0,
-      connectTimeout: 2000,
-      tls: REDIS_URL.startsWith('rediss://') ? {} : undefined,
-    });
-    redis.on('error', () => {});
+    let spins = 0;
+    try {
+      const redis = new Redis(REDIS_URL, {
+        maxRetriesPerRequest: 0,
+        connectTimeout: 1000,
+        tls: REDIS_URL.startsWith('rediss://') ? {} : undefined,
+      });
+      redis.on('error', () => {});
 
-    const spinsKey = `nocap:spins:${addr}`;
-    const spinsRaw = await redis.get(spinsKey);
-    const spins = parseInt(spinsRaw || '0', 10);
-    await redis.quit();
+      const spinsKey = `nocap:spins:${addr}`;
+      const spinsRaw = await redis.get(spinsKey);
+      spins = parseInt(spinsRaw || '0', 10);
+      await redis.quit();
+    } catch (e) {
+      console.warn(`[Wallet Status] Redis connection offline/failed, fallback to DB spins check.`);
+      try {
+        const existingSession = await db.query.walletSessions.findFirst({
+          where: eq(walletSessions.wallet, addr),
+        });
+        if (existingSession) {
+          spins = existingSession.spins;
+        }
+      } catch (dbErr) {}
+    }
 
     // 2. Fetch $NOCAP Token Balance from Solana Blockchain
     let balance = 0;

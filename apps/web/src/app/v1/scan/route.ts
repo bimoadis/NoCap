@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { Redis } from 'ioredis';
-import { db, predictions, walletProfiles, regimeConfigs, outcomes } from '@nocap/db';
+import { db, predictions, walletProfiles, regimeConfigs, outcomes, walletSessions } from '@nocap/db';
 import { eq } from 'drizzle-orm';
 import { URL } from 'url';
 import { Connection, PublicKey } from '@solana/web3.js';
@@ -441,15 +441,43 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
     return new Response(JSON.stringify({ error: 'Missing mint address' }), { status: 400 });
   }
 
+  if (!userWallet) {
+    return new Response(
+      JSON.stringify({
+        error: 'WALLET_REQUIRED',
+        message: 'You must connect a Phantom wallet to perform scans.',
+      }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Enforce Gating Check
   try {
-    const redis = getRedis();
-    if (userWallet) {
-      // Wallet connected - Check token balance
-      let balance = 0;
-      if (userWallet === '5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbzuSu' || userWallet.startsWith('3mVc') || userWallet.startsWith('Fh2s')) {
-        balance = 1500; // Mock balance for sandbox testing
-      } else {
+    // 1. Fetch or create user session from Supabase
+    let session = await db.query.walletSessions.findFirst({
+      where: eq(walletSessions.wallet, userWallet),
+    });
+
+    if (!session) {
+      const defaultSession = {
+        wallet: userWallet,
+        connected: true,
+        access: false,
+        accessUntil: 0,
+        spins: 0,
+        burns: 0,
+        freeScans: 3,
+      };
+      await db.insert(walletSessions).values(defaultSession).onConflictDoNothing();
+      session = defaultSession as any;
+    }
+
+    // 2. Fetch $NOCAP Token Balance from Solana Blockchain
+    let balance = 0;
+    if (userWallet === '5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbzuSu' || userWallet.startsWith('3mVc') || userWallet.startsWith('Fh2s')) {
+      balance = 1500; // Mock balance for sandbox testing
+    } else {
+      try {
         const connection = new Connection(RPC_ENDPOINT);
         const pubkey = new PublicKey(userWallet);
         const mintPubkey = new PublicKey(NOCAP_TOKEN_MINT);
@@ -458,41 +486,53 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
           const balanceInfo = await connection.getTokenAccountBalance(tokenAccounts.value[0].pubkey);
           balance = balanceInfo.value.uiAmount || 0;
         }
+      } catch (e) {
+        console.warn(`[Gating] Failed to query token balance for ${userWallet}, defaulting to 0:`, e);
       }
+    }
 
-      if (balance < 1000) {
+    const hasAccess = balance >= 1000;
+
+    const activeSession = session!;
+
+    // 3. Evaluate limits
+    if (activeSession.freeScans > 0) {
+      // Consume 1 free scan
+      const nextFree = activeSession.freeScans - 1;
+      const nextSpins = activeSession.spins + 1;
+      
+      await db.update(walletSessions)
+        .set({
+          freeScans: nextFree,
+          spins: nextSpins,
+          access: hasAccess,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletSessions.wallet, userWallet));
+        
+      console.log(`[Gating] Wallet ${userWallet} consumed free scan. Remaining: ${nextFree}`);
+    } else {
+      // Free scans exhausted, require 1000 $NOCAP balance
+      if (!hasAccess) {
         return new Response(
           JSON.stringify({
             error: 'INSUFFICIENT_BALANCE',
-            message: `Insufficient $NOCAP balance. You hold ${balance} $NOCAP, but 1000 $NOCAP is required.`,
+            message: `Free trials exhausted. You hold ${balance} $NOCAP, but 1000 $NOCAP is required for unlimited scans.`,
           }),
           { status: 403, headers: { 'Content-Type': 'application/json' } }
         );
       }
-
-      // Wallet authorized - increment spin count
-      await redis.incr(`nocap:spins:${userWallet}`);
-    } else {
-      // Anonymous user - check IP free trial (limit to 3 scans)
-      const trialKey = `nocap:trial:${clientIp}`;
-      const trialCountRaw = await redis.get(trialKey);
-      const trialCount = parseInt(trialCountRaw || '0', 10);
-
-      if (trialCount >= 3) {
-        return new Response(
-          JSON.stringify({
-            error: 'TRIAL_EXCEEDED',
-            message: 'Free trial limit (3 scans) reached. Please connect a Phantom wallet with at least 1000 $NOCAP to unlock unlimited scans.',
-          }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Increment IP trial count and set 24h expiration
-      await redis.incr(trialKey);
-      if (!trialCountRaw) {
-        await redis.expire(trialKey, 86400); // 24 hours TTL
-      }
+      
+      // Allow scan and increment spin count
+      await db.update(walletSessions)
+        .set({
+          spins: activeSession.spins + 1,
+          access: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletSessions.wallet, userWallet));
+        
+      console.log(`[Gating] Wallet ${userWallet} authorized via 1000 $NOCAP holding.`);
     }
   } catch (err: any) {
     console.error('[Gating Gatekeeper] Error executing gating check, allowing as fallback:', err);

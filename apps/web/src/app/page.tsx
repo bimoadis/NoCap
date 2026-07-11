@@ -94,6 +94,9 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         setWalletStatus(data);
+        if (data.freeScans !== undefined) {
+          setAnonScans(3 - data.freeScans);
+        }
       }
     } catch (err) {
       console.error('Error fetching wallet status:', err);
@@ -321,6 +324,12 @@ export default function Home() {
 
     requestAnimationFrame(() => {
       setVerdictIn(true);
+      setTimeout(() => {
+        const reportEl = document.getElementById('verdict-report');
+        if (reportEl) {
+          reportEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
     });
   };
 
@@ -338,9 +347,7 @@ export default function Home() {
       return;
     }
 
-    const walletScansKey = `nocap_wallet_scans_${walletAddr}`;
-    const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
-    if (walletScans >= 3 && (!walletStatus || !walletStatus.access)) {
+    if (anonScans >= 3 && (!walletStatus || !walletStatus.access)) {
       setShowGateModal(true);
       return;
     }
@@ -540,8 +547,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (logs.length > 0 && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (logs.length > 0) {
+      const logEl = document.getElementById('log');
+      if (logEl) {
+        logEl.scrollTop = logEl.scrollHeight;
+      }
     }
   }, [logs]);
 
@@ -1084,7 +1094,11 @@ export default function Home() {
                     <div className="text-[10px] font-mono text-[#8494b0] mr-2" style={{ fontSize: '10px', color: '#8494b0', whiteSpace: 'nowrap' }}>
                       {walletAddr ? (
                         <span>
-                          <span className="text-[#83d9ff]" style={{ color: '#83d9ff', fontWeight: 'bold' }}>{walletAddr.substring(0, 4)}...{walletAddr.substring(walletAddr.length - 4)}</span> | {walletStatus?.access ? <span className="text-[#3ce6a4]" style={{ color: '#3ce6a4', fontWeight: 'bold' }}>UNLIMITED ACCESS</span> : <span>TRIAL: <span className="text-[#f2b544]" style={{ color: '#f2b544', fontWeight: 'bold' }}>{Math.max(0, 3 - anonScans)}/3 SCANS</span> LEFT</span>}
+                          {walletStatus?.access ? (
+                            <span className="text-[#3ce6a4]" style={{ color: '#3ce6a4', fontWeight: 'bold' }}>UNLIMITED ACCESS</span>
+                          ) : (
+                            <span>TRIAL: <span className="text-[#f2b544]" style={{ color: '#f2b544', fontWeight: 'bold' }}>{Math.max(0, 3 - anonScans)}/3 SCANS</span> LEFT</span>
+                          )}
                         </span>
                       ) : (
                         <span className="text-[#ff5472]" style={{ color: '#ff5472', fontWeight: 'bold' }}>CONNECT WALLET TO SCAN</span>
@@ -1125,7 +1139,7 @@ export default function Home() {
 
             {/* Verdict Card Output */}
             {verdictVisible && (
-              <div className="verdict-wrap show">
+              <div className="verdict-wrap show" id="verdict-report">
                 <div className={`vcard in is-${verdictType}`}>
                   <div className="v-left">
                     <div className="flex items-center gap-2 mb-1">
