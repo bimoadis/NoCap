@@ -71,6 +71,7 @@ export default function Home() {
   const [walletStatus, setWalletStatus] = useState<any>(null);
   const [showGateModal, setShowGateModal] = useState<boolean>(false);
   const [anonScans, setAnonScans] = useState<number>(0);
+  const [detectedClusters, setDetectedClusters] = useState<any[]>([]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -271,6 +272,7 @@ export default function Home() {
   const resetUI = () => {
     clearTimers();
     setLogs([]);
+    setDetectedClusters([]);
     setSteps((prev) => prev.map((s) => ({ ...s, status: 'idle' })));
     setProgressPct(0);
     setScanLabel('IDLE');
@@ -390,6 +392,7 @@ export default function Home() {
       es.addEventListener('cluster', (e) => {
         try {
           const data = JSON.parse(e.data);
+          setDetectedClusters((prev) => [...prev, data]);
           addLog('a', `cluster resolved: ${data.wallets} wallets linked to single parent`);
         } catch (err) {}
       });
@@ -1153,7 +1156,47 @@ export default function Home() {
                       </button>
                       <div className="exp-panel">
                         <div className="exp-inner">
-                          <div className="exp-content" id="xg">{verdictExps[0]}</div>
+                          <div className="exp-content" id="xg">
+                            {currentScenario === -1 ? (
+                              <div className="flex flex-col gap-2">
+                                {detectedClusters.length > 0 ? (
+                                  <div>
+                                    <svg viewBox="0 0 360 140" width="100%" height="140">
+                                      {detectedClusters.map((c, idx) => {
+                                        const cx = 40 + idx * 70;
+                                        const cy = 70;
+                                        return (
+                                          <g key={`dc-svg-${idx}`}>
+                                            <circle cx={cx} cy={cy} r="6" fill="#ff5470" />
+                                            {Array.from({ length: Math.min(10, c.wallets) }).map((_, i) => {
+                                              const y = 12 + i * 12;
+                                              return (
+                                                <React.Fragment key={`dc-svg-l-${i}`}>
+                                                  <line x1={cx} y1={cy} x2="250" y2={y} stroke="rgba(255,84,112,0.4)" strokeWidth="1" />
+                                                  <circle cx="250" cy={y} r="2.5" fill="#ff5470" />
+                                                </React.Fragment>
+                                              );
+                                            })}
+                                          </g>
+                                        );
+                                      })}
+                                    </svg>
+                                    <div className="text-xs text-[#8494b0] mt-2">
+                                      {detectedClusters.map((c, i) => (
+                                        <div key={`dctxt-${i}`} className="mt-1" style={{ fontSize: '11px' }}>
+                                          • Cluster resolved: <span className="text-[#ff5470]" style={{ color: '#ff5470', fontWeight: 'bold' }}>{c.wallets} wallets</span> linked to parent <span className="font-mono text-[#83d9ff]" style={{ color: '#83d9ff' }}>{c.parent.substring(0, 6)}...{c.parent.substring(c.parent.length - 4)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  fgOrganic()
+                                )}
+                              </div>
+                            ) : (
+                              verdictExps[0]
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
