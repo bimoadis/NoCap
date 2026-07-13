@@ -45,7 +45,6 @@ async function answerCallbackQuery(callbackQueryId: string) {
 const MAIN_KEYBOARD = {
   inline_keyboard: [
     [{ text: '🔍 Scan Contract', callback_data: 'action:scan' }],
-    [{ text: '👛 Wallet Analysis', callback_data: 'action:wallet' }],
     [{ text: '📜 Scan History', callback_data: 'action:history' }],
     [
       { text: '⚙️ Settings', callback_data: 'action:settings' },
@@ -168,7 +167,16 @@ export async function POST(request: NextRequest) {
         const result = await response.json();
 
         if (result.error) {
-          await sendTelegramMessage(chatId, `❌ <b>Scan Failed</b>\n${result.message || result.error}`);
+          if (result.error === 'INSUFFICIENT_BALANCE') {
+            await sendTelegramMessage(
+              chatId,
+              `❌ <b>Scans Exhausted</b>\n\n` +
+              `Your free scans are exhausted and your linked wallet holds less than 1,000 $NOCAP.\n\n` +
+              `Please top up at least <b>1,000 $NOCAP</b> to get unlimited scans.`
+            );
+          } else {
+            await sendTelegramMessage(chatId, `❌ <b>Scan Failed</b>\n${result.message || result.error}`);
+          }
           return new Response(JSON.stringify({ ok: true }));
         }
 
@@ -249,10 +257,45 @@ async function sendSettings(chatId: number) {
 }
 
 async function sendHistory(chatId: number) {
-  const historyText = `📜 <b>Recent Scans</b>\n\n` +
-    `<b>Today</b>\n\n` +
-    `• BONK\nRisk: 🟢 12\n\n` +
-    `• WIF\nRisk: 🟢 18\n\n` +
-    `• ABC\nRisk: 🔴 73`;
-  await sendTelegramMessage(chatId, historyText);
+  try {
+    // 1. Fetch user's linked wallet
+    const { data: dbSession } = await supabase
+      .from('wallet_sessions')
+      .select('wallet')
+      .eq('telegram_chat_id', String(chatId))
+      .maybeSingle();
+
+    if (!dbSession || !dbSession.wallet) {
+      await sendTelegramMessage(chatId, `📜 <b>Recent Scans</b>\n\nNo wallet linked. Please connect your wallet first to view history.`);
+      return;
+    }
+
+    // 2. Fetch predictions associated with this wallet
+    const { data: scans, error } = await supabase
+      .from('predictions')
+      .select('mint, verdict, confidence')
+      .eq('wallet', dbSession.wallet)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (error || !scans || scans.length === 0) {
+      await sendTelegramMessage(chatId, `📜 <b>Recent Scans</b>\n\nNo recent scans found. Start by scanning a contract address!`);
+      return;
+    }
+
+    let historyText = `📜 <b>Recent Scans</b>\n\n`;
+    scans.forEach((scan: any) => {
+      const isCap = scan.verdict === 'CAP';
+      const riskScore = isCap ? Math.round(50 + scan.confidence * 50) : Math.round((1 - scan.confidence) * 40);
+      const riskColor = riskScore >= 70 ? '🔴' : riskScore >= 40 ? '🟡' : '🟢';
+      
+      const shortMint = scan.mint.substring(0, 6) + '...' + scan.mint.substring(scan.mint.length - 4);
+      
+      historyText += `• <code>${shortMint}</code>\nRisk Score: ${riskColor} <b>${riskScore} / 100</b>\nVerdict: <b>${scan.verdict}</b>\n\n`;
+    });
+
+    await sendTelegramMessage(chatId, historyText.trim());
+  } catch (err: any) {
+    await sendTelegramMessage(chatId, `❌ <b>Failed to fetch scan history</b>\n${err.message || err}`);
+  }
 }

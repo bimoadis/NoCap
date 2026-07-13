@@ -142,6 +142,7 @@ async function performInlineScan(
   mint: string,
   creator: string,
   socialsExist: boolean,
+  userWallet: string | null,
   writer: WritableStreamDefaultWriter<any>,
   encoder: TextEncoder
 ) {
@@ -322,6 +323,7 @@ async function performInlineScan(
         features,
         regime_version: regime.regimeVersion,
         created_at: new Date().toISOString(),
+        wallet: userWallet,
       });
 
       // Trigger oracle outcome resolution instantly for development feedback
@@ -527,7 +529,7 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
       }
     }
 
-    const hasAccess = true; // Bypass gating checks for testing to ensure scans are never blocked
+    const hasAccess = balance >= 1000;
 
     const activeSession = session!;
 
@@ -574,13 +576,14 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
 
 
 
+
   if (stream) {
     const responseStream = new TransformStream();
     const writer = responseStream.writable.getWriter();
     const encoder = new TextEncoder();
 
     // Trigger inline scan asynchronously
-    performInlineScan(mint, '7xKpA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', true, writer, encoder);
+    performInlineScan(mint, '7xKpA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', true, userWallet, writer, encoder);
 
     return new Response(responseStream.readable, {
       headers: {
@@ -595,7 +598,7 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
     const writer = responseStream.writable.getWriter();
     const encoder = new TextEncoder();
 
-    performInlineScan(mint, '7xKpA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', true, writer, encoder);
+    performInlineScan(mint, '7xKpA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', true, userWallet, writer, encoder);
 
     // Read from stream to find the verdict event
     const reader = responseStream.readable.getReader();
