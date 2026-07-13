@@ -12,13 +12,15 @@ dns.setDefaultResultOrder('ipv4first');
 import path from 'path';
 import fs from 'fs';
 
-dotenv.config();
-const workspaceEnv = path.resolve(process.cwd(), '.env');
-const parentEnv = path.resolve(process.cwd(), '../../.env');
-if (fs.existsSync(workspaceEnv)) {
-  dotenv.config({ path: workspaceEnv });
-} else if (fs.existsSync(parentEnv)) {
-  dotenv.config({ path: parentEnv });
+if (!process.env.RPC_ENDPOINT) {
+  dotenv.config();
+  const workspaceEnv = path.resolve(process.cwd(), '.env');
+  const parentEnv = path.resolve(process.cwd(), '../../.env');
+  if (fs.existsSync(workspaceEnv)) {
+    dotenv.config({ path: workspaceEnv });
+  } else if (fs.existsSync(parentEnv)) {
+    dotenv.config({ path: parentEnv });
+  }
 }
 
 const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';

@@ -9,13 +9,15 @@ dns.setDefaultResultOrder('ipv4first');
 import path from 'path';
 import fs from 'fs';
 
-dotenv.config();
-const workspaceEnv = path.resolve(process.cwd(), '.env');
-const parentEnv = path.resolve(process.cwd(), '../../.env');
-if (fs.existsSync(workspaceEnv)) {
-  dotenv.config({ path: workspaceEnv });
-} else if (fs.existsSync(parentEnv)) {
-  dotenv.config({ path: parentEnv });
+if (!process.env.DATABASE_URL) {
+  dotenv.config();
+  const workspaceEnv = path.resolve(process.cwd(), '.env');
+  const parentEnv = path.resolve(process.cwd(), '../../.env');
+  if (fs.existsSync(workspaceEnv)) {
+    dotenv.config({ path: workspaceEnv });
+  } else if (fs.existsSync(parentEnv)) {
+    dotenv.config({ path: parentEnv });
+  }
 }
 
 const pool = new pg.Pool({
