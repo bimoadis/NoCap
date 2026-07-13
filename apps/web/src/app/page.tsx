@@ -445,6 +445,11 @@ export default function Home() {
       try {
         const data = JSON.parse(e.data);
         console.log('[NOCAP Client] Verdict payload received:', data);
+        if (data.dbSaved) {
+          console.log('[NOCAP Client] Data successfully saved/updated in Supabase Database!');
+        } else {
+          console.warn('[NOCAP Client] Warning: Data was not saved to database.');
+        }
         
         setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
         setProgressPct(100);

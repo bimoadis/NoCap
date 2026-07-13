@@ -274,6 +274,7 @@ async function performInlineScan(
 
     console.log(`[STEP 13] Generating structured human-readable reasons for verdict report...`);
 
+    let dbSaved = false;
     // Save to predictions table
     console.log(`[STEP 14] Logging immutable scan prediction record to PostgreSQL database...`);
     try {
@@ -322,6 +323,7 @@ async function performInlineScan(
         }
       });
       console.log(`[ORACLE] Instant resolved outcomes for ${mint}: rug_30m=${isRug}`);
+      dbSaved = true;
     } catch (e: any) {
       console.error('[Inline Scan] Failed to save prediction/outcome to DB:', e.message, e.stack);
     }
@@ -334,6 +336,7 @@ async function performInlineScan(
       subclass: verdict.subclass,
       reasons: verdict.reasons,
       verdictLevel: verdict.verdictLevel,
+      dbSaved: dbSaved,
     })}\n\n`));
 
   } catch (err: any) {
