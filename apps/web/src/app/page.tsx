@@ -73,6 +73,46 @@ export default function Home() {
   const [anonScans, setAnonScans] = useState<number>(0);
   const [detectedClusters, setDetectedClusters] = useState<any[]>([]);
 
+  const [tgChatId, setTgChatId] = useState<string | null>(null);
+  const [tgLinkStatus, setTgLinkStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const chatId = urlParams.get('tg_chat_id');
+      if (chatId) {
+        setTgChatId(chatId);
+        setTgLinkStatus('pending_connection');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tgChatId && walletAddr) {
+      setTgLinkStatus('linking');
+      (async () => {
+        try {
+          const res = await fetch('/api/v1/telegram/link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tgChatId, wallet: walletAddr }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setTgLinkStatus('success');
+            alert('Success! Your Telegram account has been linked to your Phantom Wallet. You can now return to the Telegram Bot.');
+          } else {
+            setTgLinkStatus('failed');
+            alert('Failed to link Telegram account: ' + (data.error || 'Unknown error'));
+          }
+        } catch (err) {
+          setTgLinkStatus('failed');
+          console.error(err);
+        }
+      })();
+    }
+  }, [tgChatId, walletAddr]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedWallet = localStorage.getItem('nocap_connected_wallet');
@@ -921,6 +961,18 @@ export default function Home() {
 
   return (
     <>
+      {tgLinkStatus && (
+        <div style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, backgroundColor: '#090d15', border: '1px solid #3ce6a4', padding: '16px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)', maxWidth: '380px', width: '90%', textAlign: 'center' }}>
+          <span style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#8494b0', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Telegram Account Linker</span>
+          <p style={{ fontSize: '13px', fontWeight: '600', color: '#eef3fa', margin: 0 }}>
+            {tgLinkStatus === 'pending_connection' && '🔌 Please connect your Phantom Wallet to link with Telegram Bot.'}
+            {tgLinkStatus === 'linking' && '⏳ Linking wallet with Telegram...'}
+            {tgLinkStatus === 'success' && '✅ Wallet Linked! You can return to Telegram.'}
+            {tgLinkStatus === 'failed' && '❌ Failed to link wallet to Telegram. Please try again.'}
+          </p>
+        </div>
+      )}
+
       <a className="skip" href="#demo">Skip to the live demo</a>
 
       <nav className="nav" aria-label="Main">

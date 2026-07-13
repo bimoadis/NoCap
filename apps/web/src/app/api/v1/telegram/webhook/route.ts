@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { handleScan } from '../../scan/route';
+import { supabase } from '../../../../../lib/supabase';
 
 async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -135,10 +136,35 @@ export async function POST(request: NextRequest) {
     const mintRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (mintRegex.test(text)) {
       const mint = text;
+
+      // Check if this Telegram Chat ID has linked their wallet
+      const { data: dbSession } = await supabase
+        .from('wallet_sessions')
+        .select('wallet')
+        .eq('telegram_chat_id', String(chatId))
+        .maybeSingle();
+
+      if (!dbSession || !dbSession.wallet) {
+        const appUrl = 'https://nocapagent.fun'; // Default live app domain
+        const connectKeyboard = {
+          inline_keyboard: [
+            [{ text: '🔌 Connect Phantom Wallet', url: `${appUrl}/?tg_chat_id=${chatId}` }]
+          ]
+        };
+        await sendTelegramMessage(
+          chatId,
+          `🔌 <b>Wallet Connection Required</b>\n\n` +
+          `You must link your Solana wallet to NoCap to perform scans from Telegram.\n\n` +
+          `Please click the button below to secure your connection.`,
+          connectKeyboard
+        );
+        return new Response(JSON.stringify({ ok: true }));
+      }
+
       await sendTelegramMessage(chatId, `⏳ <b>Scanning...</b>\n\n• Fetching blockchain data\n• Running AI detection\n• Calculating risk score`);
 
       try {
-        const response = await handleScan(mint, false, `Telegram_${chatId}`, '127.0.0.1');
+        const response = await handleScan(mint, false, dbSession.wallet, '127.0.0.1');
         const result = await response.json();
 
         if (result.error) {
