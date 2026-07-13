@@ -1,21 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, walletProfiles } from '@nocap/db';
-import { eq } from 'drizzle-orm';
-import dotenv from 'dotenv';
-
-import path from 'path';
-import fs from 'fs';
-
-if (!process.env.DATABASE_URL) {
-  dotenv.config();
-  const workspaceEnv = path.resolve(process.cwd(), '.env');
-  const parentEnv = path.resolve(process.cwd(), '../../.env');
-  if (fs.existsSync(workspaceEnv)) {
-    dotenv.config({ path: workspaceEnv });
-  } else if (fs.existsSync(parentEnv)) {
-    dotenv.config({ path: parentEnv });
-  }
-}
+import { supabase } from '../../../../../lib/supabase';
 
 export async function GET(
   request: NextRequest,
@@ -28,11 +12,13 @@ export async function GET(
   }
 
   try {
-    const cached = await db.query.walletProfiles.findFirst({
-      where: eq(walletProfiles.address, addr),
-    });
+    const { data: cached, error } = await supabase
+      .from('wallet_profiles')
+      .select('*')
+      .eq('address', addr)
+      .maybeSingle();
 
-    if (!cached) {
+    if (error || !cached) {
       return new Response(JSON.stringify({
         address: addr,
         tag: 'ORGANIC',
@@ -50,11 +36,11 @@ export async function GET(
     }
 
     let tag = 'ORGANIC';
-    if ((cached.reputationFlags as string[]).includes('rug_participant') || cached.deadUnder10m >= 3) {
+    if ((cached.reputation_flags as string[] || []).includes('rug_participant') || cached.dead_under_10m >= 3) {
       tag = 'RUGGER';
-    } else if (cached.funderType === 'cex') {
+    } else if (cached.funder_type === 'cex') {
       tag = 'CEX';
-    } else if (cached.funderType === 'deployer') {
+    } else if (cached.funder_type === 'deployer') {
       tag = 'DEPLOYER';
     }
 
@@ -63,10 +49,10 @@ export async function GET(
       tag,
       trustScore: cached.trust,
       stats: {
-        priorRugs: cached.deadUnder10m,
+        priorRugs: cached.dead_under_10m,
         priorLaunches: cached.launches,
-        avgExtractionSol: cached.avgExtractionSol,
-        fundedSnipers: cached.fundedSnipers,
+        avgExtractionSol: cached.avg_extraction_sol,
+        fundedSnipers: cached.funded_snipers,
       },
       clusterId: cached.cluster || 'none',
     }), {

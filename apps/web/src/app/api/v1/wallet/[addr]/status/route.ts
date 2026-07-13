@@ -1,25 +1,6 @@
 import { NextRequest } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { db, walletProfiles, walletSessions } from '@nocap/db';
-import { eq } from 'drizzle-orm';
-import dotenv from 'dotenv';
-import dns from 'dns';
-
-dns.setDefaultResultOrder('ipv4first');
-
-import path from 'path';
-import fs from 'fs';
-
-if (!process.env.RPC_ENDPOINT) {
-  dotenv.config();
-  const workspaceEnv = path.resolve(process.cwd(), '.env');
-  const parentEnv = path.resolve(process.cwd(), '../../.env');
-  if (fs.existsSync(workspaceEnv)) {
-    dotenv.config({ path: workspaceEnv });
-  } else if (fs.existsSync(parentEnv)) {
-    dotenv.config({ path: parentEnv });
-  }
-}
+import { supabase } from '../../../../../../lib/supabase';
 
 const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
@@ -37,9 +18,12 @@ export async function GET(
   try {
     let spins = 0;
     try {
-      const existingSession = await db.query.walletSessions.findFirst({
-        where: eq(walletSessions.wallet, addr),
-      });
+      const { data: existingSession } = await supabase
+        .from('wallet_sessions')
+        .select('spins')
+        .eq('wallet', addr)
+        .maybeSingle();
+
       if (existingSession) {
         spins = existingSession.spins;
       }
@@ -70,23 +54,26 @@ export async function GET(
 
     let isFound = false;
     try {
-      const profile = await db.query.walletProfiles.findFirst({
-        where: eq(walletProfiles.address, addr),
-      });
+      const { data: profile } = await supabase
+        .from('wallet_profiles')
+        .select('*')
+        .eq('address', addr)
+        .maybeSingle();
+
       isFound = !!profile;
       
       if (!isFound) {
         // Automatically save new profile to Supabase
-        await db.insert(walletProfiles).values({
+        await supabase.from('wallet_profiles').insert({
           address: addr,
-          funderType: 'unknown',
-          reputationFlags: [],
+          funder_type: 'unknown',
+          reputation_flags: [],
           launches: 0,
-          deadUnder10m: 0,
-          avgExtractionSol: 0,
-          fundedSnipers: 0,
+          dead_under_10m: 0,
+          avg_extraction_sol: 0,
+          funded_snipers: 0,
           trust: 1.0,
-        }).onConflictDoNothing();
+        });
         isFound = true;
       }
     } catch (e) {
@@ -99,24 +86,15 @@ export async function GET(
 
     // Save/Update session data in Supabase wallet_sessions table
     try {
-      await db.insert(walletSessions).values({
+      await supabase.from('wallet_sessions').upsert({
         wallet: addr,
         connected: true,
         access: hasAccess,
-        accessUntil: 0,
+        access_until: 0,
         spins: spins,
         burns: 0,
-        freeScans: freeScansLeft,
-      })
-      .onConflictDoUpdate({
-        target: walletSessions.wallet,
-        set: {
-          connected: true,
-          access: hasAccess,
-          spins: spins,
-          freeScans: freeScansLeft,
-          updatedAt: new Date(),
-        }
+        free_scans: freeScansLeft,
+        updated_at: new Date().toISOString(),
       });
       console.log(`[Wallet Status] Updated wallet session for ${addr} in Supabase!`);
     } catch (e) {

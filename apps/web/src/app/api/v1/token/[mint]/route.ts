@@ -1,21 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, predictions } from '@nocap/db';
-import { eq } from 'drizzle-orm';
-import dotenv from 'dotenv';
-
-import path from 'path';
-import fs from 'fs';
-
-if (!process.env.DATABASE_URL) {
-  dotenv.config();
-  const workspaceEnv = path.resolve(process.cwd(), '.env');
-  const parentEnv = path.resolve(process.cwd(), '../../.env');
-  if (fs.existsSync(workspaceEnv)) {
-    dotenv.config({ path: workspaceEnv });
-  } else if (fs.existsSync(parentEnv)) {
-    dotenv.config({ path: parentEnv });
-  }
-}
+import { supabase } from '../../../../../lib/supabase';
 
 export async function GET(
   request: NextRequest,
@@ -29,11 +13,13 @@ export async function GET(
   }
 
   try {
-    const cached = await db.query.predictions.findFirst({
-      where: eq(predictions.mint, mint),
-    });
+    const { data: cached, error } = await supabase
+      .from('predictions')
+      .select('*')
+      .eq('mint', mint)
+      .maybeSingle();
 
-    if (!cached) {
+    if (error || !cached) {
       return new Response(JSON.stringify({ error: 'Token scan not found' }), { status: 404 });
     }
 
@@ -43,8 +29,8 @@ export async function GET(
       confidence: cached.confidence,
       subclass: cached.subclass,
       reasons: cached.reasons,
-      regimeVersion: cached.regimeVersion,
-      createdAt: cached.createdAt,
+      regimeVersion: cached.regime_version,
+      createdAt: cached.created_at,
       features: cached.features,
     }), {
       headers: { 'Content-Type': 'application/json' },

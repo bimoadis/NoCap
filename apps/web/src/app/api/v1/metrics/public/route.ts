@@ -1,25 +1,15 @@
-import { db, predictions } from '@nocap/db';
-import { count } from 'drizzle-orm';
-import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
-
-if (!process.env.DATABASE_URL) {
-  dotenv.config();
-  const workspaceEnv = path.resolve(process.cwd(), '.env');
-  const parentEnv = path.resolve(process.cwd(), '../../.env');
-  if (fs.existsSync(workspaceEnv)) {
-    dotenv.config({ path: workspaceEnv });
-  } else if (fs.existsSync(parentEnv)) {
-    dotenv.config({ path: parentEnv });
-  }
-}
+import { supabase } from '../../../../../lib/supabase';
 
 export async function GET() {
   let dbCount = 0;
   try {
-    const res = await db.select({ total: count() }).from(predictions);
-    dbCount = res[0]?.total || 0;
+    const { count, error } = await supabase
+      .from('predictions')
+      .select('*', { count: 'exact', head: true });
+    
+    if (!error && count !== null) {
+      dbCount = count;
+    }
   } catch (err) {
     // Ignore db failures
   }

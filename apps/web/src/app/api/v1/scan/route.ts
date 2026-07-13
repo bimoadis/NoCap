@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, predictions, walletProfiles, regimeConfigs, outcomes, walletSessions } from '@nocap/db';
-import { eq } from 'drizzle-orm';
+import { supabase } from '../../../../lib/supabase';
 import { URL } from 'url';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { computeFeatures, evaluateVerdict } from '@nocap/core';
@@ -26,22 +25,40 @@ if (!process.env.RPC_ENDPOINT) {
 const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';
 const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
 
-
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function mapProfile(raw: any) {
+  if (!raw) return null;
+  return {
+    address: raw.address,
+    firstTxTimestamp: raw.first_tx_timestamp ? new Date(raw.first_tx_timestamp) : null,
+    txCount: raw.tx_count,
+    lastFunder: raw.last_funder,
+    funderType: raw.funder_type,
+    reputationFlags: raw.reputation_flags || [],
+    launches: raw.launches,
+    deadUnder10m: raw.dead_under_10m,
+    avgExtractionSol: raw.avg_extraction_sol,
+    fundedSnipers: raw.funded_snipers,
+    cluster: raw.cluster,
+    trust: raw.trust,
+    updatedAt: raw.updated_at ? new Date(raw.updated_at) : null,
+  };
+}
 
 async function getOrCreateWalletProfile(address: string): Promise<any> {
   // 1. Try DB first
-  let dbProfile = null;
   try {
-    dbProfile = await db.query.walletProfiles.findFirst({
-      where: eq(walletProfiles.address, address),
-    });
-  } catch (e) {}
+    const { data: dbProfile } = await supabase
+      .from('wallet_profiles')
+      .select('*')
+      .eq('address', address)
+      .maybeSingle();
 
-  if (dbProfile) {
-    return dbProfile;
-  }
+    if (dbProfile) {
+      return mapProfile(dbProfile);
+    }
+  } catch (e) {}
 
   // 2. Fetch from Solana RPC
   let txCount = 10;
@@ -64,22 +81,22 @@ async function getOrCreateWalletProfile(address: string): Promise<any> {
   // Save new profile
   const newProfile = {
     address,
-    firstTxTimestamp,
-    txCount,
-    funderType: 'unknown',
-    reputationFlags: [],
+    first_tx_timestamp: firstTxTimestamp.toISOString(),
+    tx_count: txCount,
+    funder_type: 'unknown',
+    reputation_flags: [],
     launches: 0,
-    deadUnder10m: 0,
-    avgExtractionSol: 0,
-    fundedSnipers: 0,
+    dead_under_10m: 0,
+    avg_extraction_sol: 0,
+    funded_snipers: 0,
     trust: 1.0,
-    updatedAt: new Date(),
   };
 
   try {
-    await db.insert(walletProfiles).values(newProfile).onConflictDoNothing();
+    await supabase.from('wallet_profiles').insert(newProfile);
   } catch (e) {}
-  return newProfile;
+
+  return mapProfile(newProfile);
 }
 
 async function traceFundingParent(address: string, creator: string): Promise<{ funder: string; funderType: string }> {
@@ -95,11 +112,14 @@ async function traceFundingParent(address: string, creator: string): Promise<{ f
         if (funder !== address) {
           let dbFunder = null;
           try {
-            dbFunder = await db.query.walletProfiles.findFirst({
-              where: eq(walletProfiles.address, funder),
-            });
+            const { data } = await supabase
+              .from('wallet_profiles')
+              .select('funder_type')
+              .eq('address', funder)
+              .maybeSingle();
+            dbFunder = data;
           } catch (e) {}
-          const isCex = dbFunder?.funderType === 'cex' || funder === '5nGaJJ3tWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71pW';
+          const isCex = dbFunder?.funder_type === 'cex' || funder === '5nGaJJ3tWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71pW';
           return {
             funder,
             funderType: isCex ? 'cex' : (funder === creator ? 'deployer' : 'organic_buyer'),
@@ -243,9 +263,24 @@ async function performInlineScan(
     console.log(`[STEP 11] Loading active Regime configuration settings from PostgreSQL database...`);
     let activeRegime = null;
     try {
-      activeRegime = await db.query.regimeConfigs.findFirst({
-        where: eq(regimeConfigs.isActive, true),
-      });
+      const { data } = await supabase
+        .from('regime_configs')
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (data) {
+        activeRegime = {
+          regimeVersion: data.regime_version,
+          maxParentShare: data.max_parent_share,
+          maxFreshWalletRatio: data.max_fresh_wallet_ratio,
+          maxBlockTrades: data.max_block_trades,
+          maxSizeUniformity: data.max_size_uniformity,
+          maxDevLaunchesDead: data.max_dev_launches_dead,
+          minDevHoldSol: data.min_dev_hold_sol,
+          maxBadOverlapCount: data.max_bad_overlap_count,
+        };
+      }
     } catch (e) {}
 
     const regime = activeRegime || {
@@ -278,49 +313,29 @@ async function performInlineScan(
     // Save to predictions table
     console.log(`[STEP 14] Logging immutable scan prediction record to PostgreSQL database...`);
     try {
-      await db.insert(predictions).values({
+      await supabase.from('predictions').upsert({
         mint,
         verdict: verdict.verdict,
         confidence: verdict.confidence,
         subclass: verdict.subclass,
         reasons: verdict.reasons,
         features,
-        regimeVersion: regime.regimeVersion,
-      })
-      .onConflictDoUpdate({
-        target: predictions.mint,
-        set: {
-          verdict: verdict.verdict,
-          confidence: verdict.confidence,
-          subclass: verdict.subclass,
-          reasons: verdict.reasons,
-          features,
-          regimeVersion: regime.regimeVersion,
-          createdAt: new Date(),
-        }
+        regime_version: regime.regimeVersion,
+        created_at: new Date().toISOString(),
       });
 
       // Trigger oracle outcome resolution instantly for development feedback
       const isRug = verdict.verdict === 'CAP';
       const graduated = !isRug && Math.random() > 0.5;
-      await db.insert(outcomes).values({
+      await supabase.from('outcomes').upsert({
         mint,
-        rug30m: isRug,
-        dead24h: isRug,
-        alive24h: !isRug,
+        rug_30m: isRug,
+        dead_24h: isRug,
+        alive_24h: !isRug,
         graduated,
-        peakPriceSol: 1.5,
-        exitMetrics: { devHoldingsRatio: isRug ? 0.05 : 0.8 },
-      })
-      .onConflictDoUpdate({
-        target: outcomes.mint,
-        set: {
-          rug30m: isRug,
-          dead24h: isRug,
-          alive24h: !isRug,
-          graduated,
-          updatedAt: new Date(),
-        }
+        peak_price_sol: 1.5,
+        exit_metrics: { devHoldingsRatio: isRug ? 0.05 : 0.8 },
+        updated_at: new Date().toISOString(),
       });
       console.log(`[ORACLE] Instant resolved outcomes for ${mint}: rug_30m=${isRug}`);
       dbSaved = true;
@@ -452,9 +467,24 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
   // Enforce Gating Check
   try {
     // 1. Fetch or create user session from Supabase
-    let session = await db.query.walletSessions.findFirst({
-      where: eq(walletSessions.wallet, userWallet),
-    });
+    let session = null;
+    const { data: dbSession } = await supabase
+      .from('wallet_sessions')
+      .select('*')
+      .eq('wallet', userWallet)
+      .maybeSingle();
+
+    if (dbSession) {
+      session = {
+        wallet: dbSession.wallet,
+        connected: dbSession.connected,
+        access: dbSession.access,
+        accessUntil: dbSession.access_until,
+        spins: dbSession.spins,
+        burns: dbSession.burns,
+        freeScans: dbSession.free_scans,
+      };
+    }
 
     if (!session) {
       const defaultSession = {
@@ -466,8 +496,16 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
         burns: 0,
         freeScans: 3,
       };
-      await db.insert(walletSessions).values(defaultSession).onConflictDoNothing();
-      session = defaultSession as any;
+      await supabase.from('wallet_sessions').insert({
+        wallet: userWallet,
+        connected: true,
+        access: false,
+        access_until: 0,
+        spins: 0,
+        burns: 0,
+        free_scans: 3,
+      });
+      session = defaultSession;
     }
 
     // 2. Fetch $NOCAP Token Balance from Solana Blockchain
@@ -498,15 +536,13 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
       // Consume 1 free scan
       const nextFree = activeSession.freeScans - 1;
       const nextSpins = activeSession.spins + 1;
-      
-      await db.update(walletSessions)
-        .set({
-          freeScans: nextFree,
-          spins: nextSpins,
-          access: hasAccess,
-          updatedAt: new Date(),
-        })
-        .where(eq(walletSessions.wallet, userWallet));
+
+      await supabase.from('wallet_sessions').update({
+        free_scans: nextFree,
+        spins: nextSpins,
+        access: hasAccess,
+        updated_at: new Date().toISOString(),
+      }).eq('wallet', userWallet);
         
       console.log(`[Gating] Wallet ${userWallet} consumed free scan. Remaining: ${nextFree}`);
     } else {
@@ -522,13 +558,11 @@ async function handleScan(mint: string | null, stream: boolean, userWallet: stri
       }
       
       // Allow scan and increment spin count
-      await db.update(walletSessions)
-        .set({
-          spins: activeSession.spins + 1,
-          access: true,
-          updatedAt: new Date(),
-        })
-        .where(eq(walletSessions.wallet, userWallet));
+      await supabase.from('wallet_sessions').update({
+        spins: activeSession.spins + 1,
+        access: true,
+        updated_at: new Date().toISOString(),
+      }).eq('wallet', userWallet);
         
       console.log(`[Gating] Wallet ${userWallet} authorized via 1000 $NOCAP holding.`);
     }
