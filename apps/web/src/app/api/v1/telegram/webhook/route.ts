@@ -203,11 +203,35 @@ export async function POST(request: NextRequest) {
         }
 
         const reasonsList = result.reasons || [];
-        const keyFindings = reasonsList.length > 0
-          ? reasonsList.map((r: any) => `• ${r.text || r}`).join('\n')
-          : '• No coordinated funding relationships detected.\n• General wallet distribution pattern normal.';
-
         const features = result.features || {};
+        const findingsArray: string[] = [];
+
+        reasonsList.forEach((r: any) => {
+          findingsArray.push(r.text || r);
+        });
+
+        // Add additional check statements to guarantee multiple bullet points
+        const parentShareValue = features.funding_parent_share || 0;
+        if (parentShareValue < 0.20 && !findingsArray.some(f => f.includes('funding') || f.includes('parent'))) {
+          findingsArray.push('No coordinated parent funding relationships detected in the initial cluster.');
+        }
+
+        const sizeUniformityValue = features.size_uniformity || 0;
+        if (sizeUniformityValue > 0.05 && !findingsArray.some(f => f.includes('uniform') || f.includes('sizing') || f.includes('Buy sizes'))) {
+          findingsArray.push(`Buy sizes standard deviation is ${sizeUniformityValue.toFixed(4)} SOL, suggesting varied retail participation.`);
+        }
+
+        const badOverlapValue = features.known_bad_overlap || 0;
+        if (badOverlapValue === 0 && !findingsArray.some(f => f.includes('rug') || f.includes('bad actor'))) {
+          findingsArray.push('No known developer or buyer connections to blacklisted rug accounts.');
+        }
+
+        if (findingsArray.length === 0) {
+          findingsArray.push('Funding and buyer sizing patterns appear organic.');
+          findingsArray.push('General wallet distribution and launch parameters normal.');
+        }
+
+        const keyFindings = findingsArray.map((f: string) => `• ${f}`).join('\n');
         const parentShare = Math.round((features.funding_parent_share || 0) * 100);
         const freshRatio = Math.round((features.fresh_wallet_ratio || 0) * 100);
         const sameBlock = (features.same_block_count || 0) > 4 ? 'High' : 'Low';
