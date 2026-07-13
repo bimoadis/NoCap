@@ -322,8 +322,8 @@ async function performInlineScan(
         }
       });
       console.log(`[ORACLE] Instant resolved outcomes for ${mint}: rug_30m=${isRug}`);
-    } catch (e) {
-      console.warn('[Inline Scan] Failed to save prediction/outcome to DB:', e);
+    } catch (e: any) {
+      console.error('[Inline Scan] Failed to save prediction/outcome to DB:', e.message, e.stack);
     }
 
     // Final Verdict Event
