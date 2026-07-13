@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
 
         const isCap = result.verdict === 'CAP';
         const rawConf = result.confidence || 0.5;
-        
+
         // Calculate risk score: if CAP (rug) it's high, if NO CAP (organic) it's low
         const riskScore = isCap ? Math.round(50 + rawConf * 50) : Math.round((1 - rawConf) * 40);
         const statusText = riskScore >= 70 ? '🔴 DANGER / RUG' : riskScore >= 40 ? '🟡 CAUTION' : '🟢 SAFE';
@@ -241,9 +241,7 @@ async function sendHelp(chatId: number) {
   const helpText = `❓ <b>Help & Documentation</b>\n\n` +
     `<b>Available commands</b>\n\n` +
     `/scan\n<i>Scan a contract</i>\n\n` +
-    `/wallet\n<i>Analyze wallet</i>\n\n` +
-    `/trending\n<i>Trending tokens</i>\n\n` +
-    `/watchlist\n<i>Saved tokens</i>\n\n` +
+    `/history\n<i>History your scans</i>\n\n` +
     `/settings\n<i>Bot settings</i>`;
   await sendTelegramMessage(chatId, helpText);
 }
@@ -288,9 +286,9 @@ async function sendHistory(chatId: number) {
       const isCap = scan.verdict === 'CAP';
       const riskScore = isCap ? Math.round(50 + scan.confidence * 50) : Math.round((1 - scan.confidence) * 40);
       const riskColor = riskScore >= 70 ? '🔴' : riskScore >= 40 ? '🟡' : '🟢';
-      
+
       const shortMint = scan.mint.substring(0, 6) + '...' + scan.mint.substring(scan.mint.length - 4);
-      
+
       historyText += `• <code>${shortMint}</code>\nRisk Score: ${riskColor} <b>${riskScore} / 100</b>\nVerdict: <b>${scan.verdict}</b>\n\n`;
     });
 
