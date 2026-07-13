@@ -100,10 +100,8 @@ export default function Home() {
           const data = await res.json();
           if (data.success) {
             setTgLinkStatus('success');
-            alert('Success! Your Telegram account has been linked to your Phantom Wallet. You can now return to the Telegram Bot.');
           } else {
             setTgLinkStatus('failed');
-            alert('Failed to link Telegram account: ' + (data.error || 'Unknown error'));
           }
         } catch (err) {
           setTgLinkStatus('failed');
@@ -962,14 +960,100 @@ export default function Home() {
   return (
     <>
       {tgLinkStatus && (
-        <div style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, backgroundColor: '#090d15', border: '1px solid #3ce6a4', padding: '16px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)', maxWidth: '380px', width: '90%', textAlign: 'center' }}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#8494b0', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Telegram Account Linker</span>
-          <p style={{ fontSize: '13px', fontWeight: '600', color: '#eef3fa', margin: 0 }}>
-            {tgLinkStatus === 'pending_connection' && '🔌 Please connect your Phantom Wallet to link with Telegram Bot.'}
-            {tgLinkStatus === 'linking' && '⏳ Linking wallet with Telegram...'}
-            {tgLinkStatus === 'success' && '✅ Wallet Linked! You can return to Telegram.'}
-            {tgLinkStatus === 'failed' && '❌ Failed to link wallet to Telegram. Please try again.'}
-          </p>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(5, 7, 12, 0.88)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }}>
+          <div style={{
+            backgroundColor: '#090d15',
+            padding: '32px',
+            borderRadius: '16px',
+            maxWidth: '420px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+            borderColor: tgLinkStatus === 'success' ? '#3ce6a4' : tgLinkStatus === 'failed' ? '#ff5470' : '#83d9ff',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+          }}>
+            {tgLinkStatus === 'pending_connection' && (
+              <>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔌</div>
+                <h3 style={{ color: '#eef3fa', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>Connect Wallet Required</h3>
+                <p style={{ color: '#8494b0', fontSize: '14px', marginBottom: '24px', lineHeight: '1.6' }}>
+                  Please click <b>CONNECT PHANTOM</b> in the top right corner of the page to link your wallet with the Telegram Bot.
+                </p>
+              </>
+            )}
+            {tgLinkStatus === 'linking' && (
+              <>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+                <h3 style={{ color: '#eef3fa', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>Linking Account...</h3>
+                <p style={{ color: '#8494b0', fontSize: '14px', marginBottom: 0, lineHeight: '1.6' }}>
+                  Securing your wallet connection with Telegram. Please wait a moment.
+                </p>
+              </>
+            )}
+            {tgLinkStatus === 'success' && (
+              <>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🟢</div>
+                <h3 style={{ color: '#3ce6a4', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>Wallet Connected</h3>
+                <p style={{ color: '#8494b0', fontSize: '14px', marginBottom: '24px', lineHeight: '1.6' }}>
+                  Your Telegram account has been linked to your wallet. You can now close this browser and return to the Telegram Bot to perform scans.
+                </p>
+                <button
+                  onClick={() => setTgLinkStatus(null)}
+                  style={{
+                    backgroundColor: '#3ce6a4',
+                    color: '#05070c',
+                    fontWeight: 'bold',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    transition: 'opacity 0.2s',
+                  }}
+                >
+                  Close Window
+                </button>
+              </>
+            )}
+            {tgLinkStatus === 'failed' && (
+              <>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔴</div>
+                <h3 style={{ color: '#ff5470', fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>Connection Failed</h3>
+                <p style={{ color: '#8494b0', fontSize: '14px', marginBottom: '24px', lineHeight: '1.6' }}>
+                  We encountered an error while trying to link your Telegram account. Please check your connection and try again.
+                </p>
+                <button
+                  onClick={() => setTgLinkStatus('pending_connection')}
+                  style={{
+                    backgroundColor: '#ff5470',
+                    color: '#eef3fa',
+                    fontWeight: 'bold',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    transition: 'opacity 0.2s',
+                  }}
+                >
+                  Retry Connection
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
