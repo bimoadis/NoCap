@@ -354,6 +354,7 @@ async function performInlineScan(
       reasons: verdict.reasons,
       verdictLevel: verdict.verdictLevel,
       dbSaved: dbSaved,
+      features,
     })}\n\n`));
 
   } catch (err: any) {
@@ -423,6 +424,17 @@ async function runSandboxSimulation(mint: string, isOrganic: boolean, stream: bo
       reasons: isOrganic
         ? [{ code: 'ORGANIC_VERDICT', text: 'Buyers trace back to 17 unrelated funding sources. Sizes look human.', severity: 'low' }]
         : [{ code: 'SHARED_FUNDING_PARENT', text: '14 of the first 20 buyers share a single funding parent. Typical extraction cluster.', severity: 'high' }],
+      features: isOrganic ? {
+        funding_parent_share: 0.0,
+        fresh_wallet_ratio: 0.1,
+        same_block_count: 1,
+        deployer_funded: false,
+      } : {
+        funding_parent_share: 0.70,
+        fresh_wallet_ratio: 0.80,
+        same_block_count: 14,
+        deployer_funded: true,
+      }
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -628,6 +640,7 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
         confidence: finalData.confidence,
         subclass: finalData.subclass,
         reasons: finalData.reasons,
+        features: finalData.features,
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 
