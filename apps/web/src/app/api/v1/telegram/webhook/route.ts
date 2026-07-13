@@ -300,9 +300,8 @@ async function sendHistory(chatId: number) {
 
     let historyText = `📜 <b>Recent Scans</b>\n\n`;
     scans.forEach((scan: any) => {
-      const isCap = scan.verdict === 'CAP';
-      const riskScore = isCap ? Math.round(50 + scan.confidence * 50) : Math.round((1 - scan.confidence) * 40);
-      const riskColor = riskScore >= 70 ? '🔴' : riskScore >= 41 ? '🟡' : '🟢';
+      const riskScore = Math.round(scan.confidence * 100);
+      const riskColor = riskScore >= 60 ? '🔴' : riskScore >= 30 ? '🟡' : '🟢';
 
       const shortMint = scan.mint.substring(0, 6) + '...' + scan.mint.substring(scan.mint.length - 4);
 
