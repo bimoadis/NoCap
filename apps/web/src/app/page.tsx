@@ -112,6 +112,14 @@ export default function Home() {
         console.log('[NOCAP Client] Wallet connected successfully:', addr);
         setWalletAddr(addr);
         localStorage.setItem('nocap_connected_wallet', addr);
+        
+        // Post explicit login to register in Supabase wallet_sessions
+        try {
+          await fetch(`/v1/wallet/${addr}/status`, { method: 'POST' });
+        } catch (e) {
+          console.error('[NOCAP Client] Failed to register session in DB:', e);
+        }
+
         await fetchWalletStatus(addr);
         const walletScansKey = `nocap_wallet_scans_${addr}`;
         const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);

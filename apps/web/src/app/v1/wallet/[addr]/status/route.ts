@@ -144,3 +144,72 @@ export async function GET(
     return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), { status: 500 });
   }
 }
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ addr: string }> }
+) {
+  const { addr } = await params;
+  if (!addr) {
+    return new Response(JSON.stringify({ error: 'Missing wallet address' }), { status: 400 });
+  }
+
+  try {
+    let spins = 0;
+    let freeScans = 3;
+
+    const existingSession = await db.query.walletSessions.findFirst({
+      where: eq(walletSessions.wallet, addr),
+    });
+
+    if (existingSession) {
+      spins = existingSession.spins;
+      freeScans = existingSession.freeScans;
+    }
+
+    await db.insert(walletSessions).values({
+      wallet: addr,
+      connected: true,
+      access: true,
+      accessUntil: 0,
+      spins: spins,
+      burns: 0,
+      freeScans: freeScans,
+    })
+    .onConflictDoUpdate({
+      target: walletSessions.wallet,
+      set: {
+        connected: true,
+        access: true,
+        updatedAt: new Date(),
+      }
+    });
+
+    // Also ensure wallet profile exists
+    const existingProfile = await db.query.walletProfiles.findFirst({
+      where: eq(walletProfiles.address, addr),
+    });
+
+    if (!existingProfile) {
+      await db.insert(walletProfiles).values({
+        address: addr,
+        funderType: 'unknown',
+        reputationFlags: [],
+        launches: 0,
+        deadUnder10m: 0,
+        avgExtractionSol: 0,
+        fundedSnipers: 0,
+        trust: 1.0,
+      }).onConflictDoNothing();
+    }
+
+    console.log(`[Wallet Login] Saved/Updated wallet session for ${addr} in Supabase!`);
+    return new Response(JSON.stringify({ success: true, wallet: addr }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err: any) {
+    console.error(`[Wallet Login] Failed to save wallet session for ${addr}:`, err);
+    return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), { status: 500 });
+  }
+}
