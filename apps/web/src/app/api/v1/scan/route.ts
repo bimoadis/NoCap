@@ -449,7 +449,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleScan(mint: string | null, stream: boolean, userWallet: string | null, clientIp: string): Promise<Response> {
+export async function handleScan(mint: string | null, stream: boolean, userWallet: string | null, clientIp: string): Promise<Response> {
   if (!mint) {
     return new Response(JSON.stringify({ error: 'Missing mint address' }), { status: 400 });
   }
