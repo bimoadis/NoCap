@@ -162,10 +162,13 @@ export async function POST(request: NextRequest) {
 
       await sendTelegramMessage(
         chatId,
-        `🔍 <b>NOCAP Interrogator</b>\n\n` +
+        `🔍 <b>NOCAP Agent</b>\n\n` +
         `Initiating live scan for token:\n` +
         `<code>${mint}</code>\n\n` +
-        `Interrogating cluster graph... Please wait 20-60 seconds...`
+        `Analyzing on-chain activity...\n` +
+        `Building wallet relationship graph...\n` +
+        `Generating intelligence report...\n\n` +
+        `Estimated time: 20–60 seconds.`
       );
 
       try {
@@ -189,7 +192,7 @@ export async function POST(request: NextRequest) {
         const isCap = result.verdict === 'CAP';
         const verdictText = isCap ? '🔴 CAP' : '🟢 NO CAP';
         const confidencePercent = Math.round((result.confidence !== undefined && result.confidence !== null ? result.confidence : 0.5) * 100);
-        
+
         let patternName = 'Organic Trading';
         if (result.subclass === 'extraction') {
           patternName = 'Extraction Scheme';
@@ -200,7 +203,7 @@ export async function POST(request: NextRequest) {
         }
 
         const reasonsList = result.reasons || [];
-        const keyFindings = reasonsList.length > 0 
+        const keyFindings = reasonsList.length > 0
           ? reasonsList.map((r: any) => `• ${r.text || r}`).join('\n')
           : '• No coordinated funding relationships detected.\n• General wallet distribution pattern normal.';
 
