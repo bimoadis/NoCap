@@ -158,9 +158,9 @@ export async function POST(
     let spins = 0;
     let freeScans = 3;
 
-    const existingSession = await db.query.walletSessions.findFirst({
-      where: eq(walletSessions.wallet, addr),
-    });
+    // Use standard select queries for maximum compatibility
+    const sessions = await db.select().from(walletSessions).where(eq(walletSessions.wallet, addr));
+    const existingSession = sessions[0];
 
     if (existingSession) {
       spins = existingSession.spins;
@@ -185,10 +185,9 @@ export async function POST(
       }
     });
 
-    // Also ensure wallet profile exists
-    const existingProfile = await db.query.walletProfiles.findFirst({
-      where: eq(walletProfiles.address, addr),
-    });
+    // Also ensure wallet profile exists using standard select
+    const profiles = await db.select().from(walletProfiles).where(eq(walletProfiles.address, addr));
+    const existingProfile = profiles[0];
 
     if (!existingProfile) {
       await db.insert(walletProfiles).values({
@@ -210,6 +209,13 @@ export async function POST(
     });
   } catch (err: any) {
     console.error(`[Wallet Login] Failed to save wallet session for ${addr}:`, err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), { status: 500 });
+    return new Response(
+      JSON.stringify({ 
+        error: err.message || 'Internal Server Error',
+        stack: err.stack,
+        details: err.toString()
+      }), 
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
