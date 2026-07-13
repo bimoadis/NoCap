@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
 
         const isCap = result.verdict === 'CAP';
         const verdictText = isCap ? '🔴 CAP' : '🟢 NO CAP';
-        const confidencePercent = Math.round((result.confidence || 0.5) * 100);
+        const confidencePercent = Math.round((result.confidence !== undefined && result.confidence !== null ? result.confidence : 0.5) * 100);
         
         let patternName = 'Organic Trading';
         if (result.subclass === 'extraction') {
@@ -299,7 +299,7 @@ async function sendHistory(chatId: number) {
     scans.forEach((scan: any) => {
       const isCap = scan.verdict === 'CAP';
       const riskScore = isCap ? Math.round(50 + scan.confidence * 50) : Math.round((1 - scan.confidence) * 40);
-      const riskColor = riskScore >= 70 ? '🔴' : riskScore >= 40 ? '🟡' : '🟢';
+      const riskColor = riskScore >= 70 ? '🔴' : riskScore >= 41 ? '🟡' : '🟢';
 
       const shortMint = scan.mint.substring(0, 6) + '...' + scan.mint.substring(scan.mint.length - 4);
 
