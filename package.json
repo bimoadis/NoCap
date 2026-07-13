@@ -10,6 +10,7 @@
     "dev:worker": "pnpm --filter @nocap/worker dev",
     "db:migrate": "pnpm --filter @nocap/db db:migrate",
     "db:seed": "pnpm --filter @nocap/db db:seed",
+    "start": "pnpm --filter @nocap/web start",
     "test": "pnpm -r test"
   },
   "devDependencies": {
