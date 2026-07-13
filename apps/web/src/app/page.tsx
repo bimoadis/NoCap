@@ -1010,22 +1010,38 @@ export default function Home() {
                 <p style={{ color: '#8494b0', fontSize: '14px', marginBottom: '24px', lineHeight: '1.6' }}>
                   Your Telegram account has been linked to your wallet. You can now close this browser and return to the Telegram Bot to perform scans.
                 </p>
-                <button
-                  onClick={() => setTgLinkStatus(null)}
-                  style={{
-                    backgroundColor: '#3ce6a4',
-                    color: '#05070c',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    transition: 'opacity 0.2s',
-                  }}
-                >
-                  Close Window
-                </button>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                  <a
+                    href="https://t.me/NoCapAgentBot"
+                    style={{
+                      backgroundColor: '#3ce6a4',
+                      color: '#05070c',
+                      fontWeight: 'bold',
+                      textDecoration: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'inline-block',
+                    }}
+                  >
+                    Return to Telegram
+                  </a>
+                  <button
+                    onClick={() => setTgLinkStatus(null)}
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: '#8494b0',
+                      border: '1px solid #3a4457',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
               </>
             )}
             {tgLinkStatus === 'failed' && (
