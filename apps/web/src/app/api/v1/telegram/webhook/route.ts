@@ -160,7 +160,13 @@ export async function POST(request: NextRequest) {
         return new Response(JSON.stringify({ ok: true }));
       }
 
-      await sendTelegramMessage(chatId, `⏳ <b>Scanning...</b>\n\n• Fetching blockchain data\n• Running AI detection\n• Calculating risk score`);
+      await sendTelegramMessage(
+        chatId,
+        `🔍 <b>NOCAP Interrogator</b>\n\n` +
+        `Initiating live scan for token:\n` +
+        `<code>${mint}</code>\n\n` +
+        `Interrogating cluster graph... Please wait 20-60 seconds...`
+      );
 
       try {
         const response = await handleScan(mint, false, dbSession.wallet, '127.0.0.1');
@@ -181,42 +187,24 @@ export async function POST(request: NextRequest) {
         }
 
         const isCap = result.verdict === 'CAP';
-        const rawConf = result.confidence || 0.5;
+        const verdictText = isCap ? '🔴 CAP' : '🟢 NO CAP';
+        const subclassText = (result.subclass || 'unknown').toUpperCase();
+        const confidencePercent = Math.round((result.confidence || 0.5) * 100);
+        const patternType = (result.subclass || 'unknown').toLowerCase();
 
-        // Calculate risk score: if CAP (rug) it's high, if NO CAP (organic) it's low
-        const riskScore = isCap ? Math.round(50 + rawConf * 50) : Math.round((1 - rawConf) * 40);
-        const statusText = riskScore >= 70 ? '🔴 DANGER / RUG' : riskScore >= 40 ? '🟡 CAUTION' : '🟢 SAFE';
-        const confidencePercent = Math.round(rawConf * 100);
+        const reasonsList = result.reasons || [];
+        const keyFindings = reasonsList.length > 0 
+          ? reasonsList.map((r: any) => `• ${r.text || r}`).join('\n')
+          : '• No significant risk patterns detected.';
 
-        // Fetch features details
-        const features = result.features || {};
-        const parentShare = Math.round((features.funding_parent_share || 0) * 100);
-        const freshRatio = Math.round((features.fresh_wallet_ratio || 0) * 100);
-        const sameBlock = (features.same_block_count || 0) > 4 ? 'High' : 'Low';
-        const devFunding = features.deployer_funded ? 'Traced' : 'None';
-
-        const reply = `🛡️ <b>NoCap Scan Report</b>\n\n` +
-          `━━━━━━━━━━━━━━\n\n` +
-          `<b>Token</b>\n<code>Solana Token</code>\n\n` +
-          `<b>Contract</b>\n<code>${mint}</code>\n\n` +
-          `━━━━━━━━━━━━━━\n\n` +
-          `<b>Risk Score</b>\n\n` +
-          `${riskScore >= 70 ? '🔴' : riskScore >= 40 ? '🟡' : '🟢'} <b>${riskScore} / 100</b>\n\n` +
-          `<b>Status</b>\n\n` +
-          `<b>${statusText}</b>\n\n` +
-          `━━━━━━━━━━━━━━\n\n` +
-          `<b>Checks</b>\n\n` +
-          `✅ Shared Funding\n<b>${parentShare}%</b>\n\n` +
-          `✅ Fresh Wallets\n<b>${freshRatio}%</b>\n\n` +
-          `✅ Same Block Buyers\n<b>${sameBlock}</b>\n\n` +
-          `✅ Deployer Funding\n<b>${devFunding}</b>\n\n` +
-          `✅ Liquidity Locked\n\n` +
-          `━━━━━━━━━━━━━━\n\n` +
-          `<b>Confidence</b>\n\n` +
-          `<b>${confidencePercent}%</b>\n\n` +
-          `━━━━━━━━━━━━━━\n\n` +
-          `<b>Recommendation</b>\n\n` +
-          `${isCap ? 'High risk indicators detected. We recommend staying away from this contract.' : 'Current on-chain indicators appear healthy.\nContinue monitoring as new transactions arrive.'}`;
+        const reply = `🔍 <b>NOCAP SCAN REPORT</b>\n\n` +
+          `<b>Token Address:</b>\n` +
+          `<code>${mint}</code>\n\n` +
+          `<b>Verdict:</b> ${verdictText} (${subclassText})\n` +
+          `<b>Confidence Level:</b> ${confidencePercent}%\n` +
+          `<b>Pattern Type:</b> ${patternType}\n\n` +
+          `<b>Key Findings:</b>\n` +
+          `${keyFindings}`;
 
         await sendTelegramMessage(chatId, reply);
       } catch (err: any) {
