@@ -178,4 +178,9 @@ function simulateIngestion() {
   console.log('[INGESTOR] Running in Sandbox Simulator mode.');
 }
 
-startWebSocket();
+// Only start the continuous WebSocket ingestor if explicitly enabled in the environment
+if (process.env.ENABLE_INGESTOR === 'true') {
+  startWebSocket();
+} else {
+  console.log('[INGESTOR] Background WebSocket ingestor is disabled by default. Set ENABLE_INGESTOR=true to run constantly.');
+}
