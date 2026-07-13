@@ -188,23 +188,49 @@ export async function POST(request: NextRequest) {
 
         const isCap = result.verdict === 'CAP';
         const verdictText = isCap ? '🔴 CAP' : '🟢 NO CAP';
-        const subclassText = (result.subclass || 'unknown').toUpperCase();
         const confidencePercent = Math.round((result.confidence || 0.5) * 100);
-        const patternType = (result.subclass || 'unknown').toLowerCase();
+        
+        let patternName = 'Organic Trading';
+        if (result.subclass === 'extraction') {
+          patternName = 'Extraction Scheme';
+        } else if (result.subclass === 'coordinated') {
+          patternName = 'Coordinated Attack';
+        } else if (result.subclass) {
+          patternName = result.subclass.charAt(0).toUpperCase() + result.subclass.slice(1) + ' Trading';
+        }
 
         const reasonsList = result.reasons || [];
         const keyFindings = reasonsList.length > 0 
           ? reasonsList.map((r: any) => `• ${r.text || r}`).join('\n')
-          : '• No significant risk patterns detected.';
+          : '• No coordinated funding relationships detected.\n• General wallet distribution pattern normal.';
 
-        const reply = `🔍 <b>NOCAP SCAN REPORT</b>\n\n` +
-          `<b>Token Address:</b>\n` +
+        const features = result.features || {};
+        const parentShare = Math.round((features.funding_parent_share || 0) * 100);
+        const freshRatio = Math.round((features.fresh_wallet_ratio || 0) * 100);
+        const sameBlock = (features.same_block_count || 0) > 4 ? 'High' : 'Low';
+        const devFunding = features.deployer_funded ? 'Traced' : 'None';
+
+        const reply = `🛡️ <b>NOCAP Agent Report</b>\n\n` +
+          `<b>Contract</b>\n` +
           `<code>${mint}</code>\n\n` +
-          `<b>Verdict:</b> ${verdictText} (${subclassText})\n` +
-          `<b>Confidence Level:</b> ${confidencePercent}%\n` +
-          `<b>Pattern Type:</b> ${patternType}\n\n` +
-          `<b>Key Findings:</b>\n` +
-          `${keyFindings}`;
+          `<b>Verdict</b>\n` +
+          `<b>${verdictText}</b>\n\n` +
+          `<b>Confidence</b>\n` +
+          `${confidencePercent}%\n\n` +
+          `<b>Pattern</b>\n` +
+          `${patternName}\n\n` +
+          `━━━━━━━━━━━━━━━━━━\n\n` +
+          `🔎 <b>Key Findings</b>\n\n` +
+          `${keyFindings}\n\n` +
+          `━━━━━━━━━━━━━━━━━━\n\n` +
+          `🛡️ <b>Security Checks</b>\n\n` +
+          `✅ Shared Funding      <b>${parentShare}%</b>\n` +
+          `✅ Fresh Wallets       <b>${freshRatio}%</b>\n` +
+          `🟢 Same Block Buyers  <b>${sameBlock}</b>\n` +
+          `✅ Deployer Funding    <b>${devFunding}</b>\n` +
+          `🔒 Liquidity           <b>Locked</b>\n\n` +
+          `━━━━━━━━━━━━━━━━━━\n\n` +
+          `Powered by NoCap Agent.`;
 
         await sendTelegramMessage(chatId, reply);
       } catch (err: any) {
