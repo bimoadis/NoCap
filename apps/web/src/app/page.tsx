@@ -90,7 +90,7 @@ export default function Home() {
 
   const fetchWalletStatus = async (addr: string) => {
     try {
-      const res = await fetch(`/v1/wallet/${addr}/status`);
+      const res = await fetch(`/api/v1/wallet/${addr}/status`);
       if (res.ok) {
         const data = await res.json();
         setWalletStatus(data);
@@ -370,7 +370,7 @@ export default function Home() {
       return next;
     });
 
-    const url = `/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true${walletAddr ? `&userWallet=${walletAddr}` : ''}`;
+    const url = `/api/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true${walletAddr ? `&userWallet=${walletAddr}` : ''}`;
     const es = new EventSource(url);
     activeESRef.current = es;
 
@@ -1374,14 +1374,14 @@ export default function Home() {
                   onClick={() => setActiveTab('csharp')}
                   type="button"
                 >
-                  GET /v1/token/:mint
+                  GET /api/v1/token/:mint
                 </button>
                 <button
                   className={`tab ${activeTab === 'json' ? 'active' : ''}`}
                   onClick={() => setActiveTab('json')}
                   type="button"
                 >
-                  GET /v1/wallet/:address
+                  GET /api/v1/wallet/:address
                 </button>
                 <button
                   className={`tab ${activeTab === 'embed' ? 'active' : ''}`}
@@ -1395,7 +1395,7 @@ export default function Home() {
               {activeTab === 'csharp' && (
                 <div className="pane active font-mono">
                   <span className="c-dim">// Request Token Scan Verdict</span><br />
-                  &gt; GET http://localhost:3000/v1/token/AGcs1vpXXJ3d2wATCA31WC915NTqQzgtpx3FvwkXpump<br />
+                  &gt; GET http://localhost:3000/api/v1/token/AGcs1vpXXJ3d2wATCA31WC915NTqQzgtpx3FvwkXpump<br />
                   <br />
                   <span className="c-dim">// Response Body</span><br />
                   {`{`}<br />
@@ -1417,7 +1417,7 @@ export default function Home() {
               {activeTab === 'json' && (
                 <div className="pane active font-mono">
                   <span className="c-dim">// Request Wallet Reputation Profile</span><br />
-                  &gt; GET http://localhost:3000/v1/wallet/7xKpA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71<br />
+                  &gt; GET http://localhost:3000/api/v1/wallet/7xKpA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71<br />
                   <br />
                   <span className="c-dim">// Response Body</span><br />
                   {`{`}<br />

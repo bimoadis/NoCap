@@ -31,7 +31,7 @@ function EmbedContent() {
       return;
     }
 
-    const es = new EventSource(`/v1/scan?mint=${encodeURIComponent(mint)}&stream=true`);
+    const es = new EventSource(`/api/v1/scan?mint=${encodeURIComponent(mint)}&stream=true`);
 
     es.addEventListener('progress', (e) => {
       try {
