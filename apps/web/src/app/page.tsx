@@ -352,198 +352,157 @@ export default function Home() {
       return;
     }
 
-    if (mintStr !== '') {
-      console.log('[NOCAP Client] Initiating live scan for Mint:', mintStr);
-      console.log('[NOCAP Client] Active connected wallet:', walletAddr);
-      // Connect to Live Next.js SSE Endpoint
-      setScanLabel('SCANNING · LIVE API STREAM');
-      addLog('k', `scan ${mintStr.substring(0, 8)}… · stream open`);
-      
-      setSteps((prev) => {
-        const next = [...prev];
-        next[0] = { ...next[0], status: 'active' };
-        return next;
-      });
-
-      const url = `/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true${walletAddr ? `&userWallet=${walletAddr}` : ''}`;
-      const es = new EventSource(url);
-      activeESRef.current = es;
-
-      const startTime = Date.now();
-
-      es.addEventListener('progress', (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          const step = data.step;
-          console.log('[NOCAP Client] Progress step:', step, 'pct:', data.pct);
-          if (step === 'deployer') {
-            addLog('f', 'deployer identified');
-            setProgressPct(10);
-          } else if (step === 'buyers') {
-            setSteps((prev) => {
-              const next = [...prev];
-              next[0] = { ...next[0], status: 'done' };
-              next[1] = { ...next[1], status: 'active' };
-              return next;
-            });
-            addLog('f', '20 trades buffered');
-            setScanLabel('SCANNING · TRADE 20/20');
-            setProgressPct(20);
-          } else if (step === 'funding_graph') {
-            setSteps((prev) => {
-              const next = [...prev];
-              next[1] = { ...next[1], status: 'done' };
-              next[2] = { ...next[2], status: 'active' };
-              return next;
-            });
-            addLog('f', 'funding graph connections traced');
-            setProgressPct(40);
-          } else if (step === 'clustering') {
-            setSteps((prev) => {
-              const next = [...prev];
-              next[2] = { ...next[2], status: 'done' };
-              next[3] = { ...next[3], status: 'active' };
-              return next;
-            });
-            setProgressPct(60);
-          } else if (step === 'scoring') {
-            setSteps((prev) => {
-              const next = [...prev];
-              next[3] = { ...next[3], status: 'done' };
-              next[4] = { ...next[4], status: 'active' };
-              next[5] = { ...next[5], status: 'active' };
-              next[6] = { ...next[6], status: 'active' };
-              next[7] = { ...next[7], status: 'active' };
-              return next;
-            });
-            setScanLabel('SCORING');
-            addLog('f', 'calculating behaviors similarity');
-            setProgressPct(80);
-          }
-        } catch (err) {}
-      });
-
-      es.addEventListener('cluster', (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          console.log('[NOCAP Client] Cluster resolved:', data);
-          setDetectedClusters((prev) => [...prev, data]);
-          if (data.isCex) {
-            addLog('g', `cluster resolved: ${data.wallets} wallets linked to CEX parent (benign)`);
-          } else {
-            addLog('a', `cluster resolved: ${data.wallets} wallets linked to single parent`);
-          }
-        } catch (err) {}
-      });
-
-      es.addEventListener('verdict', (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          console.log('[NOCAP Client] Verdict payload received:', data);
-          
-          setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
-          setProgressPct(100);
-          
-          const durationS = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
-          setScanLabel(`DONE · ${durationS}`);
-
-          if (data.verdict === 'CAP') {
-            addLog('r', 'rug / extraction pattern confirmed');
-            addLog('k', `confidence ${data.confidence} · verdict ready`);
-          } else {
-            addLog('g', 'no bundle / extraction patterns matched');
-            addLog('k', `confidence ${data.confidence} · verdict ready`);
-          }
-
-          // Increment scan count on successful client-side validation
-          if (walletAddr) {
-            const walletScansKey = `nocap_wallet_scans_${walletAddr}`;
-            const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
-            const nextScans = walletScans + 1;
-            localStorage.setItem(walletScansKey, nextScans.toString());
-            setAnonScans(nextScans);
-            fetchWalletStatus(walletAddr);
-          }
-
-          const liveScenario = {
-            mint: mintStr.substring(0, 6) + '…' + mintStr.substring(mintStr.length - 4),
-            time: durationS,
-            kind: data.verdict === 'CAP' ? 'cap' : 'nocap',
-            subclass: data.subclass,
-            conf: Math.round(data.confidence * 100),
-            verdictLevel: data.verdictLevel || 'FINAL',
-            sentence: data.reasons?.[0]?.text || (data.verdict === 'CAP' ? 'Supply pattern controlled.' : 'Organic trading flow confirmed.'),
-            exps: [
-              data.verdict === 'CAP' ? fgBundle() : fgOrganic(),
-              barsFor(data.verdict === 'CAP' ? 'cap' : 'nocap'),
-              data.verdict === 'CAP' 
-                ? 'live scan detection\nhigh wallet similarity\nsupply concentration detected'
-                : 'live scan detection\norganic transfer sources\nbenign trading distribution',
-              data.reasons?.[0]?.text || (data.verdict === 'CAP' ? 'Typical extraction cluster.' : 'Organic wallet profile.')
-            ]
-          };
-
-          showVerdict(liveScenario);
-          es.close();
-          activeESRef.current = null;
-        } catch (err) {}
-      });
-
-      es.onerror = () => {
-        addLog('r', 'connection error or scanner offline');
-        setScanLabel('FAILED');
-        es.close();
-        activeESRef.current = null;
-      };
-
+    if (mintStr === '') {
+      alert('Please enter a valid Solana token mint address first.');
       return;
     }
 
-    // Run Mock Sandbox Scenario Replay
-    const S = presetScenarios[currentScenario];
-    setScanLabel(`SCANNING · ${S.name} PATTERN`);
+    console.log('[NOCAP Client] Initiating live scan for Mint:', mintStr);
+    console.log('[NOCAP Client] Active connected wallet:', walletAddr);
+    // Connect to Live Next.js SSE Endpoint
+    setScanLabel('SCANNING · LIVE API STREAM');
+    addLog('k', `scan ${mintStr.substring(0, 8)}… · stream open`);
     
-    addLog(S.logs[0].cls, S.logs[0].text);
-    const stepDur = 620;
-    
-    presetScenarios[currentScenario].logs.forEach((logItem, logIdx) => {
-      if (logIdx === 0) return;
-      later(300 + (logIdx - 1) * stepDur, () => {
-        addLog(logItem.cls, logItem.text);
-      });
+    setSteps((prev) => {
+      const next = [...prev];
+      next[0] = { ...next[0], status: 'active' };
+      return next;
     });
 
-    steps.forEach((_, i) => {
-      later(300 + i * stepDur, () => {
-        setSteps((prev) => {
-          const next = [...prev];
-          next[i] = { ...next[i], status: 'active' };
-          if (i > 0) {
-            next[i - 1] = { ...next[i - 1], status: 'done' };
-          }
-          return next;
-        });
-        setProgressPct(Math.round(((i + 1) / 9) * 100));
-        if (i === 1) setScanLabel('SCANNING · TRADE 20/20');
-        if (i === 6) setScanLabel('SCORING');
-      });
+    const url = `/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true${walletAddr ? `&userWallet=${walletAddr}` : ''}`;
+    const es = new EventSource(url);
+    activeESRef.current = es;
+
+    const startTime = Date.now();
+
+    es.addEventListener('progress', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        const step = data.step;
+        console.log('[NOCAP Client] Progress step:', step, 'pct:', data.pct);
+        if (step === 'deployer') {
+          addLog('f', 'deployer identified');
+          setProgressPct(10);
+        } else if (step === 'buyers') {
+          setSteps((prev) => {
+            const next = [...prev];
+            next[0] = { ...next[0], status: 'done' };
+            next[1] = { ...next[1], status: 'active' };
+            return next;
+          });
+          addLog('f', '20 trades buffered');
+          setScanLabel('SCANNING · TRADE 20/20');
+          setProgressPct(20);
+        } else if (step === 'funding_graph') {
+          setSteps((prev) => {
+            const next = [...prev];
+            next[1] = { ...next[1], status: 'done' };
+            next[2] = { ...next[2], status: 'active' };
+            return next;
+          });
+          addLog('f', 'funding graph connections traced');
+          setProgressPct(40);
+        } else if (step === 'clustering') {
+          setSteps((prev) => {
+            const next = [...prev];
+            next[2] = { ...next[2], status: 'done' };
+            next[3] = { ...next[3], status: 'active' };
+            return next;
+          });
+          setProgressPct(60);
+        } else if (step === 'scoring') {
+          setSteps((prev) => {
+            const next = [...prev];
+            next[3] = { ...next[3], status: 'done' };
+            next[4] = { ...next[4], status: 'active' };
+            next[5] = { ...next[5], status: 'active' };
+            next[6] = { ...next[6], status: 'active' };
+            next[7] = { ...next[7], status: 'active' };
+            return next;
+          });
+          setScanLabel('SCORING');
+          addLog('f', 'calculating behaviors similarity');
+          setProgressPct(80);
+        }
+      } catch (err) {}
     });
 
-    later(300 + 9 * stepDur, () => {
-      setSteps((prev) => {
-        const next = [...prev];
-        next[8] = { ...next[8], status: 'done' };
-        return next;
-      });
-      setScanLabel(`DONE · ${S.time}`);
-      showVerdict(S);
+    es.addEventListener('cluster', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        console.log('[NOCAP Client] Cluster resolved:', data);
+        setDetectedClusters((prev) => [...prev, data]);
+        if (data.isCex) {
+          addLog('g', `cluster resolved: ${data.wallets} wallets linked to CEX parent (benign)`);
+        } else {
+          addLog('a', `cluster resolved: ${data.wallets} wallets linked to single parent`);
+        }
+      } catch (err) {}
     });
+
+    es.addEventListener('verdict', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        console.log('[NOCAP Client] Verdict payload received:', data);
+        
+        setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
+        setProgressPct(100);
+        
+        const durationS = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+        setScanLabel(`DONE · ${durationS}`);
+
+        if (data.verdict === 'CAP') {
+          addLog('r', 'rug / extraction pattern confirmed');
+          addLog('k', `confidence ${data.confidence} · verdict ready`);
+        } else {
+          addLog('g', 'no bundle / extraction patterns matched');
+          addLog('k', `confidence ${data.confidence} · verdict ready`);
+        }
+
+        // Increment scan count on successful client-side validation
+        if (walletAddr) {
+          const walletScansKey = `nocap_wallet_scans_${walletAddr}`;
+          const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
+          const nextScans = walletScans + 1;
+          localStorage.setItem(walletScansKey, nextScans.toString());
+          setAnonScans(nextScans);
+          fetchWalletStatus(walletAddr);
+        }
+
+        const liveScenario = {
+          mint: mintStr.substring(0, 6) + '…' + mintStr.substring(mintStr.length - 4),
+          time: durationS,
+          kind: data.verdict === 'CAP' ? 'cap' : 'nocap',
+          subclass: data.subclass,
+          conf: Math.round(data.confidence * 100),
+          verdictLevel: data.verdictLevel || 'FINAL',
+          sentence: data.reasons?.[0]?.text || (data.verdict === 'CAP' ? 'Supply pattern controlled.' : 'Organic trading flow confirmed.'),
+          exps: [
+            data.verdict === 'CAP' ? fgBundle() : fgOrganic(),
+            barsFor(data.verdict === 'CAP' ? 'cap' : 'nocap'),
+            data.verdict === 'CAP' 
+              ? 'live scan detection\nhigh wallet similarity\nsupply concentration detected'
+              : 'live scan detection\norganic transfer sources\nbenign trading distribution',
+            data.reasons?.[0]?.text || (data.verdict === 'CAP' ? 'Typical extraction cluster.' : 'Organic wallet profile.')
+          ]
+        };
+
+        showVerdict(liveScenario);
+        es.close();
+        activeESRef.current = null;
+      } catch (err) {}
+    });
+
+    es.onerror = () => {
+      addLog('r', 'connection error or scanner offline');
+      setScanLabel('FAILED');
+      es.close();
+      activeESRef.current = null;
+    };
   };
 
   const selectScenario = (idx: number) => {
-    setCurrentScenario(idx);
-    setCustomMint('');
-    resetUI();
+    // Left as no-op to prevent compilation errors if called elsewhere
   };
 
   useEffect(() => {
@@ -1193,47 +1152,43 @@ export default function Home() {
                       <div className="exp-panel">
                         <div className="exp-inner">
                           <div className="exp-content" id="xg">
-                            {currentScenario === -1 ? (
-                              <div className="flex flex-col gap-2">
-                                {detectedClusters.length > 0 ? (
-                                  <div>
-                                    <svg viewBox="0 0 360 140" width="100%" height="140">
-                                      {detectedClusters.map((c, idx) => {
-                                        const cx = 40 + idx * 70;
-                                        const cy = 70;
-                                        const color = c.isCex ? '#3ce6a4' : '#ff5470';
-                                        const strokeColor = c.isCex ? 'rgba(60,230,164,0.4)' : 'rgba(255,84,112,0.4)';
-                                        return (
-                                          <g key={`dc-svg-${idx}`}>
-                                            <circle cx={cx} cy={cy} r="6" fill={color} />
-                                            {Array.from({ length: Math.min(10, c.wallets) }).map((_, i) => {
-                                              const y = 12 + i * 12;
-                                              return (
-                                                <React.Fragment key={`dc-svg-l-${i}`}>
-                                                  <line x1={cx} y1={cy} x2="250" y2={y} stroke={strokeColor} strokeWidth="1" />
-                                                  <circle cx="250" cy={y} r="2.5" fill={color} />
-                                                </React.Fragment>
-                                              );
-                                            })}
-                                          </g>
-                                        );
-                                      })}
-                                    </svg>
-                                    <div className="text-xs text-[#8494b0] mt-2">
-                                      {detectedClusters.map((c, i) => (
-                                        <div key={`dctxt-${i}`} className="mt-1" style={{ fontSize: '11px' }}>
-                                          • Cluster resolved: <span className="font-bold" style={{ color: c.isCex ? '#3ce6a4' : '#ff5470' }}>{c.wallets} wallets</span> linked to parent <span className="font-mono text-[#83d9ff]" style={{ color: '#83d9ff' }}>{c.parent.substring(0, 6)}...{c.parent.substring(c.parent.length - 4)}</span> {c.isCex && <span className="text-[#3ce6a4] font-semibold">(CEX hot wallet - benign)</span>}
-                                        </div>
-                                      ))}
-                                    </div>
+                            <div className="flex flex-col gap-2">
+                              {detectedClusters.length > 0 ? (
+                                <div>
+                                  <svg viewBox="0 0 360 140" width="100%" height="140">
+                                    {detectedClusters.map((c, idx) => {
+                                      const cx = 40 + idx * 70;
+                                      const cy = 70;
+                                      const color = c.isCex ? '#3ce6a4' : '#ff5470';
+                                      const strokeColor = c.isCex ? 'rgba(60,230,164,0.4)' : 'rgba(255,84,112,0.4)';
+                                      return (
+                                        <g key={`dc-svg-${idx}`}>
+                                          <circle cx={cx} cy={cy} r="6" fill={color} />
+                                          {Array.from({ length: Math.min(10, c.wallets) }).map((_, i) => {
+                                            const y = 12 + i * 12;
+                                            return (
+                                              <React.Fragment key={`dc-svg-l-${i}`}>
+                                                <line x1={cx} y1={cy} x2="250" y2={y} stroke={strokeColor} strokeWidth="1" />
+                                                <circle cx="250" cy={y} r="2.5" fill={color} />
+                                              </React.Fragment>
+                                            );
+                                          })}
+                                        </g>
+                                      );
+                                    })}
+                                  </svg>
+                                  <div className="text-xs text-[#8494b0] mt-2">
+                                    {detectedClusters.map((c, i) => (
+                                      <div key={`dctxt-${i}`} className="mt-1" style={{ fontSize: '11px' }}>
+                                        • Cluster resolved: <span className="font-bold" style={{ color: c.isCex ? '#3ce6a4' : '#ff5470' }}>{c.wallets} wallets</span> linked to parent <span className="font-mono text-[#83d9ff]" style={{ color: '#83d9ff' }}>{c.parent.substring(0, 6)}...{c.parent.substring(c.parent.length - 4)}</span> {c.isCex && <span className="text-[#3ce6a4] font-semibold">(CEX hot wallet - benign)</span>}
+                                      </div>
+                                    ))}
                                   </div>
-                                ) : (
-                                  fgOrganic()
-                                )}
-                              </div>
-                            ) : (
-                              verdictExps[0]
-                            )}
+                                </div>
+                              ) : (
+                                fgOrganic()
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
