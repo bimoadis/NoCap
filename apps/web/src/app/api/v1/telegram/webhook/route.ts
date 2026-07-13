@@ -206,32 +206,57 @@ export async function POST(request: NextRequest) {
         const features = result.features || {};
         const findingsArray: string[] = [];
 
+        // 1. Add direct reasons from evaluation engine
         reasonsList.forEach((r: any) => {
-          findingsArray.push(r.text || r);
+          if (r.code !== 'ORGANIC_VERDICT' && r.code !== 'COORDINATED_WARNING') {
+            findingsArray.push(r.text || r);
+          }
         });
 
-        // Add additional check statements to guarantee multiple bullet points
+        // 2. Add Parent Funding Share details
         const parentShareValue = features.funding_parent_share || 0;
-        if (parentShareValue < 0.20 && !findingsArray.some(f => f.includes('funding') || f.includes('parent'))) {
-          findingsArray.push('No coordinated parent funding relationships detected in the initial cluster.');
+        if (parentShareValue >= 0.60) {
+          findingsArray.push(`High clustering: ${Math.round(parentShareValue * 100)}% of buyers share a single funding parent, suggesting creator bundling.`);
+        } else if (parentShareValue >= 0.20) {
+          findingsArray.push(`Moderate clustering: ${Math.round(parentShareValue * 100)}% of buyers share funding sources, indicating semi-coordinated setups.`);
+        } else {
+          findingsArray.push(`Decentralized funding: less than 20% of buyers share a funding source, confirming independent retail entries.`);
         }
 
+        // 3. Add Fresh Wallet Ratio details
+        const freshRatioValue = features.fresh_wallet_ratio || 0;
+        if (freshRatioValue >= 0.60) {
+          findingsArray.push(`High throwaway ratio: ${Math.round(freshRatioValue * 100)}% of early buyers use wallets created less than 24h ago, typical of sniper bots.`);
+        } else {
+          findingsArray.push(`Mature wallets: ${Math.round((1 - freshRatioValue) * 100)}% of buyers have active transaction histories older than 24 hours.`);
+        }
+
+        // 4. Add Same Block Concentration details
+        const sameBlockCount = features.same_block_count || 0;
+        if (sameBlockCount > 4) {
+          findingsArray.push(`Sniper concentration: ${sameBlockCount} buyers entered in the exact launch block, suggesting aggressive automated snipers.`);
+        } else {
+          findingsArray.push(`Spread execution: early buys are distributed across multiple blocks, indicating natural retail timing.`);
+        }
+
+        // 5. Add Buy Size Uniformity details
         const sizeUniformityValue = features.size_uniformity || 0;
-        if (sizeUniformityValue > 0.05 && !findingsArray.some(f => f.includes('uniform') || f.includes('sizing') || f.includes('Buy sizes'))) {
-          findingsArray.push(`Buy sizes standard deviation is ${sizeUniformityValue.toFixed(4)} SOL, suggesting varied retail participation.`);
+        if (sizeUniformityValue > 0 && sizeUniformityValue <= 0.05) {
+          findingsArray.push(`Automated bot sizing: standard deviation of buys is extremely uniform (${sizeUniformityValue.toFixed(4)} SOL), typical of bot profiles.`);
+        } else if (sizeUniformityValue > 0.05) {
+          findingsArray.push(`Natural sizing variance: buy sizes deviate naturally by ${sizeUniformityValue.toFixed(4)} SOL, suggesting human retail participation.`);
         }
 
+        // 6. Add Bad Actor Overlaps details
         const badOverlapValue = features.known_bad_overlap || 0;
-        if (badOverlapValue === 0 && !findingsArray.some(f => f.includes('rug') || f.includes('bad actor'))) {
-          findingsArray.push('No known developer or buyer connections to blacklisted rug accounts.');
+        if (badOverlapValue >= 1) {
+          findingsArray.push(`Bad actor alert: ${badOverlapValue} buyer wallet(s) have direct funding links to confirmed rug/extraction creators.`);
+        } else {
+          findingsArray.push('Clean reputation: zero buyer wallet links to blacklisted rug accounts or flagged wallets.');
         }
 
-        if (findingsArray.length === 0) {
-          findingsArray.push('Funding and buyer sizing patterns appear organic.');
-          findingsArray.push('General wallet distribution and launch parameters normal.');
-        }
-
-        const keyFindings = findingsArray.map((f: string) => `• ${f}`).join('\n');
+        const finalFindings = findingsArray.slice(0, 5);
+        const keyFindings = finalFindings.map((f: string) => `• ${f}`).join('\n');
         const parentShare = Math.round((features.funding_parent_share || 0) * 100);
         const freshRatio = Math.round((features.fresh_wallet_ratio || 0) * 100);
         const sameBlock = (features.same_block_count || 0) > 4 ? 'High' : 'Low';
