@@ -79,6 +79,19 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  chains/robinhood:
+    dependencies:
+      '@nocap/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@nocap/models':
+        specifier: workspace:*
+        version: link:../../models
+    devDependencies:
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
   chains/solana:
     dependencies:
       '@nocap/core':

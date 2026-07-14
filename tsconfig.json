@@ -15,7 +15,8 @@
       "@nocap/models": ["./models/index.ts"],
       "@nocap/solana": ["./chains/solana/index.ts"],
       "@nocap/core": ["./packages/core/src/index.ts"],
-      "@nocap/engine": ["./engine/index.ts"]
+      "@nocap/engine": ["./engine/index.ts"],
+      "@nocap/robinhood": ["./chains/robinhood/index.ts"]
     }
   },
   "exclude": ["node_modules", "dist"]
