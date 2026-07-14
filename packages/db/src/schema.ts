@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, boolean, integer, doublePrecision, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, boolean, integer, doublePrecision, jsonb, primaryKey } from 'drizzle-orm/pg-core';
 
 export const regimeConfigs = pgTable('regime_configs', {
   regimeVersion: varchar('regime_version', { length: 50 }).primaryKey(),
@@ -30,18 +30,25 @@ export const walletProfiles = pgTable('wallet_profiles', {
 });
 
 export const predictions = pgTable('predictions', {
-  mint: varchar('mint', { length: 44 }).primaryKey(),
+  chainId: varchar('chain_id', { length: 50 }).default('solana').notNull(),
+  mint: varchar('mint', { length: 44 }).notNull(),
   verdict: varchar('verdict', { length: 20 }).notNull(), // 'CAP' | 'NO CAP'
   confidence: doublePrecision('confidence').notNull(),
   subclass: varchar('subclass', { length: 50 }).notNull(), // 'extraction' | 'organic' | 'coordinated'
   reasons: jsonb('reasons').notNull(), // Array<{code: string, text: string, severity: string}>
   features: jsonb('features').notNull(), // JSON snapshot of computed features
+  uaimDocument: jsonb('uaim_document'), // Store complete UAIM structure
   regimeVersion: varchar('regime_version', { length: 50 }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.chainId, table.mint] })
+  };
 });
 
 export const outcomes = pgTable('outcomes', {
-  mint: varchar('mint', { length: 44 }).primaryKey(),
+  chainId: varchar('chain_id', { length: 50 }).default('solana').notNull(),
+  mint: varchar('mint', { length: 44 }).notNull(),
   rug30m: boolean('rug_30m').default(false).notNull(),
   dead24h: boolean('dead_24h').default(false).notNull(),
   alive24h: boolean('alive_24h').default(false).notNull(),
@@ -49,6 +56,10 @@ export const outcomes = pgTable('outcomes', {
   peakPriceSol: doublePrecision('peak_price_sol').default(0.0).notNull(),
   exitMetrics: jsonb('exit_metrics').default({}).notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.chainId, table.mint] })
+  };
 });
 
 export const walletSessions = pgTable('wallet_sessions', {
@@ -62,3 +73,24 @@ export const walletSessions = pgTable('wallet_sessions', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const bridgeTransactions = pgTable('bridge_transactions', {
+  txHash: varchar('tx_hash', { length: 66 }).primaryKey(),
+  bridgeName: varchar('bridge_name', { length: 50 }).notNull(),
+  sourceChainId: varchar('source_chain_id', { length: 20 }).notNull(),
+  sourceAddress: varchar('source_address', { length: 64 }).notNull(),
+  targetChainId: varchar('target_chain_id', { length: 20 }).notNull(),
+  targetAddress: varchar('target_address', { length: 64 }).notNull(),
+  amount: varchar('amount', { length: 78 }).notNull(), // Large integer values as string to prevent overflow
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+export const riskRules = pgTable('risk_rules', {
+  code: varchar('code', { length: 50 }).primaryKey(),
+  severity: varchar('severity', { length: 10 }).notNull(),
+  condition: jsonb('condition').notNull(),
+  message: varchar('message', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+

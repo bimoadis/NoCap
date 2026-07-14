@@ -1,0 +1,523 @@
+{
+  "id": "ff66b216-ead4-43b9-a642-3a92942ce57b",
+  "prevId": "5a1714ec-f2a6-448f-9cf7-58ec74eaa485",
+  "version": "5",
+  "dialect": "pg",
+  "tables": {
+    "bridge_transactions": {
+      "name": "bridge_transactions",
+      "schema": "",
+      "columns": {
+        "tx_hash": {
+          "name": "tx_hash",
+          "type": "varchar(66)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bridge_name": {
+          "name": "bridge_name",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_chain_id": {
+          "name": "source_chain_id",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_address": {
+          "name": "source_address",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_chain_id": {
+          "name": "target_chain_id",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_address": {
+          "name": "target_address",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "varchar(78)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "outcomes": {
+      "name": "outcomes",
+      "schema": "",
+      "columns": {
+        "chain_id": {
+          "name": "chain_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'solana'"
+        },
+        "mint": {
+          "name": "mint",
+          "type": "varchar(44)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rug_30m": {
+          "name": "rug_30m",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "dead_24h": {
+          "name": "dead_24h",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "alive_24h": {
+          "name": "alive_24h",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "graduated": {
+          "name": "graduated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "peak_price_sol": {
+          "name": "peak_price_sol",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "exit_metrics": {
+          "name": "exit_metrics",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "outcomes_chain_id_mint_pk": {
+          "name": "outcomes_chain_id_mint_pk",
+          "columns": [
+            "chain_id",
+            "mint"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "predictions": {
+      "name": "predictions",
+      "schema": "",
+      "columns": {
+        "chain_id": {
+          "name": "chain_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'solana'"
+        },
+        "mint": {
+          "name": "mint",
+          "type": "varchar(44)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subclass": {
+          "name": "subclass",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reasons": {
+          "name": "reasons",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "features": {
+          "name": "features",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uaim_document": {
+          "name": "uaim_document",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regime_version": {
+          "name": "regime_version",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "predictions_chain_id_mint_pk": {
+          "name": "predictions_chain_id_mint_pk",
+          "columns": [
+            "chain_id",
+            "mint"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "regime_configs": {
+      "name": "regime_configs",
+      "schema": "",
+      "columns": {
+        "regime_version": {
+          "name": "regime_version",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "max_parent_share": {
+          "name": "max_parent_share",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_fresh_wallet_ratio": {
+          "name": "max_fresh_wallet_ratio",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_block_trades": {
+          "name": "max_block_trades",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_size_uniformity": {
+          "name": "max_size_uniformity",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_dev_launches_dead": {
+          "name": "max_dev_launches_dead",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "min_dev_hold_sol": {
+          "name": "min_dev_hold_sol",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_bad_overlap_count": {
+          "name": "max_bad_overlap_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "risk_rules": {
+      "name": "risk_rules",
+      "schema": "",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "condition": {
+          "name": "condition",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "wallet_profiles": {
+      "name": "wallet_profiles",
+      "schema": "",
+      "columns": {
+        "address": {
+          "name": "address",
+          "type": "varchar(44)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "first_tx_timestamp": {
+          "name": "first_tx_timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tx_count": {
+          "name": "tx_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_funder": {
+          "name": "last_funder",
+          "type": "varchar(44)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "funder_type": {
+          "name": "funder_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
+        },
+        "reputation_flags": {
+          "name": "reputation_flags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "launches": {
+          "name": "launches",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "dead_under_10m": {
+          "name": "dead_under_10m",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "avg_extraction_sol": {
+          "name": "avg_extraction_sol",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "funded_snipers": {
+          "name": "funded_snipers",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cluster": {
+          "name": "cluster",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trust": {
+          "name": "trust",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "wallet_sessions": {
+      "name": "wallet_sessions",
+      "schema": "",
+      "columns": {
+        "wallet": {
+          "name": "wallet",
+          "type": "varchar(44)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "connected": {
+          "name": "connected",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "access": {
+          "name": "access",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "access_until": {
+          "name": "access_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "spins": {
+          "name": "spins",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "burns": {
+          "name": "burns",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "free_scans": {
+          "name": "free_scans",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
