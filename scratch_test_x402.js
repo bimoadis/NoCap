@@ -3,7 +3,7 @@ const http = require('http');
 const data = JSON.stringify({
   txHash: "0xmock_payment_hash_12345",
   chainId: "4663",
-  address: "0x482b0Ce8f55e6c9A0e66c466303aA87F52E46000",
+  address: "0x482b0Ce8f55e6c9A0e66c466303aA87F52E4600d",
   userWallet: "5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbzuSu"
 });
 

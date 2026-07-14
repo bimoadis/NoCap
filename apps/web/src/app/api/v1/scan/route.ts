@@ -313,6 +313,10 @@ async function performInlineScan(
         deployer_funded: true,
       };
 
+      const reasonsList = scoredUaim.risks.length > 0
+        ? scoredUaim.risks.map(r => ({ code: r.code, text: r.evidence, severity: r.severity }))
+        : [{ code: 'SAFE', text: 'Funding and buyer patterns appear organic.', severity: 'low' }];
+
       console.log(`[STEP 14] Logging immutable scan prediction record to PostgreSQL database...`);
       try {
         await supabase.from('predictions').upsert({
@@ -321,7 +325,7 @@ async function performInlineScan(
           verdict: scoredUaim.score.verdict,
           confidence: scoredUaim.score.confidence,
           subclass: scoredUaim.score.subclass,
-          reasons: scoredUaim.risks.map(r => ({ code: r.code, text: r.evidence, severity: r.severity })),
+          reasons: reasonsList,
           features,
           regime_version: 'REGIME W14',
           created_at: new Date().toISOString(),
@@ -353,7 +357,7 @@ async function performInlineScan(
         verdict: scoredUaim.score.verdict,
         confidence: scoredUaim.score.confidence,
         subclass: scoredUaim.score.subclass,
-        reasons: scoredUaim.risks.map(r => ({ code: r.code, text: r.evidence, severity: r.severity })),
+        reasons: reasonsList,
         verdictLevel: scoredUaim.score.verdict === 'CAP' ? 'high' : 'low',
         dbSaved,
         features,

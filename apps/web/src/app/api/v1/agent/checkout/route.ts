@@ -83,6 +83,10 @@ export async function POST(req: NextRequest) {
       deployer_funded: true,
     };
 
+    const reasonsList = scoredUaim.risks.length > 0
+        ? scoredUaim.risks.map(r => ({ code: r.code, text: r.evidence, severity: r.severity }))
+        : [{ code: 'SAFE', text: 'Funding and buyer patterns appear organic.', severity: 'low' }];
+
     // 4. Save to Database
     let dbSaved = false;
     try {
@@ -92,7 +96,7 @@ export async function POST(req: NextRequest) {
         verdict: scoredUaim.score.verdict,
         confidence: scoredUaim.score.confidence,
         subclass: scoredUaim.score.subclass,
-        reasons: scoredUaim.risks.map(r => ({ code: r.code, text: r.evidence, severity: r.severity })),
+        reasons: reasonsList,
         features,
         regime_version: 'REGIME W14',
         created_at: new Date().toISOString(),
@@ -124,7 +128,7 @@ export async function POST(req: NextRequest) {
       verdict: scoredUaim.score.verdict,
       confidence: scoredUaim.score.confidence,
       subclass: scoredUaim.score.subclass,
-      reasons: scoredUaim.risks.map(r => ({ code: r.code, text: r.evidence, severity: r.severity })),
+      reasons: reasonsList,
       dbSaved,
       uaim
     });
