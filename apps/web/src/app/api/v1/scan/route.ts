@@ -772,27 +772,6 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
       session = defaultSession;
     }
 
-    // 2. Fetch $NOCAP Token Balance from Solana Blockchain
-    let balance = 0;
-    if (userWallet === '5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbzuSu' || userWallet.startsWith('3mVc') || userWallet.startsWith('Fh2s')) {
-      balance = 1500; // Mock balance for sandbox testing
-    } else {
-      try {
-        const connection = new Connection(RPC_ENDPOINT);
-        const pubkey = new PublicKey(userWallet);
-        const mintPubkey = new PublicKey(NOCAP_TOKEN_MINT);
-        const tokenAccounts = await connection.getTokenAccountsByOwner(pubkey, { mint: mintPubkey });
-        if (tokenAccounts.value.length > 0) {
-          const balanceInfo = await connection.getTokenAccountBalance(tokenAccounts.value[0].pubkey);
-          balance = balanceInfo.value.uiAmount || 0;
-        }
-      } catch (e) {
-        console.warn(`[Gating] Failed to query token balance for ${userWallet}, defaulting to 0:`, e);
-      }
-    }
-
-    const hasAccess = balance >= 1000;
-
     const activeSession = session!;
 
     // 3. Evaluate limits
@@ -804,7 +783,7 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
       await supabase.from('wallet_sessions').update({
         free_scans: nextFree,
         spins: nextSpins,
-        access: hasAccess,
+        access: false,
         updated_at: new Date().toISOString(),
       }).eq('wallet', userWallet);
         
