@@ -180,8 +180,8 @@ export async function POST(request: NextRequest) {
             await sendTelegramMessage(
               chatId,
               `❌ <b>Scans Exhausted</b>\n\n` +
-              `Your free scans are exhausted and your linked wallet holds less than 1,000 $NOCAP.\n\n` +
-              `Please top up at least <b>1,000 $NOCAP</b> to get unlimited scans.`
+              `Your free scans are exhausted.\n\n` +
+              `Please scan using the NoCap Web App at https://nocapagent.fun to pay 0.05 SOL per scan directly via your Phantom wallet.`
             );
           } else {
             await sendTelegramMessage(chatId, `❌ <b>Scan Failed</b>\n${result.message || result.error}`);

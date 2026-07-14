@@ -81,7 +81,7 @@ export async function GET(
     }
 
     const burnTokensThreshold = 1000;
-    const hasAccess = true; // Bypass gating checks for testing to ensure connected wallets are always granted access
+    const hasAccess = false;
     const freeScansLeft = Math.max(0, 3 - spins);
 
     // Save/Update session data in Supabase wallet_sessions table

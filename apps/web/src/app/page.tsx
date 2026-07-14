@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Connection, Transaction, SystemProgram, PublicKey } from '@solana/web3.js';
 
 // Design color constant matching visual CSS tokens
 const COLOR_MAP: Record<string, string> = {
@@ -22,11 +23,14 @@ interface LogItem {
   text: string;
 }
 
+const TREASURY_WALLET = process.env.NEXT_PUBLIC_TREASURY_WALLET!;
+const SCAN_PRICE_SOL = parseFloat(process.env.NEXT_PUBLIC_SCAN_PRICE_SOL!);
+
 export default function Home() {
   // Scenario Selection (0: Bundled launch, 1: Organic launch)
   const [currentScenario, setCurrentScenario] = useState<number>(0);
   const [customMint, setCustomMint] = useState<string>('');
-  
+
   // Terminal State
   const [scanLabel, setScanLabel] = useState<string>('IDLE');
   const [progressPct, setProgressPct] = useState<number>(0);
@@ -72,6 +76,16 @@ export default function Home() {
   const [showGateModal, setShowGateModal] = useState<boolean>(false);
   const [anonScans, setAnonScans] = useState<number>(0);
   const [detectedClusters, setDetectedClusters] = useState<any[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMsg) {
+      const timer = setTimeout(() => {
+        setErrorMsg(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMsg]);
 
   const [tgChatId, setTgChatId] = useState<string | null>(null);
   const [tgLinkStatus, setTgLinkStatus] = useState<string | null>(null);
@@ -150,13 +164,13 @@ export default function Home() {
         console.log('[NOCAP Client] Wallet connected successfully:', addr);
         setWalletAddr(addr);
         localStorage.setItem('nocap_connected_wallet', addr);
-        
+
         await fetchWalletStatus(addr);
         const walletScansKey = `nocap_wallet_scans_${addr}`;
         const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
         setAnonScans(walletScans);
       } else {
-        alert('Phantom Wallet not found. Please install the Phantom Extension.');
+        setErrorMsg('Phantom Wallet not found. Please install the Phantom Extension.');
       }
     } catch (err) {
       console.error('[NOCAP Client] Wallet connection failed:', err);
@@ -375,13 +389,14 @@ export default function Home() {
   const [verdictWord, setVerdictWord] = useState<string>('CAP');
 
   // Triggering the Scan execution
+  // Triggering the Scan execution
   const runScan = () => {
     const mintStr = customMint.trim();
     resetUI();
 
     // Check Gating Limits on Client Side
     if (!walletAddr) {
-      alert('Please connect your Phantom wallet first to unlock your 3 free scans.');
+      setErrorMsg('Please connect your Phantom wallet first to unlock your 3 free scans.');
       connectWallet();
       return;
     }
@@ -392,23 +407,84 @@ export default function Home() {
     }
 
     if (mintStr === '') {
-      alert('Please enter a valid Solana token mint address first.');
+      setErrorMsg('Please enter a valid Solana token mint address first.');
       return;
     }
 
+    startScanFlow();
+  };
+
+  const payAndScan = async () => {
+    try {
+      const provider = (window as any).solana;
+      if (!provider || !provider.isPhantom) {
+        setErrorMsg('Phantom Wallet not found. Please install the Phantom Extension.');
+        return;
+      }
+
+      if (!walletAddr) {
+        setErrorMsg('Please connect your wallet first.');
+        return;
+      }
+
+      resetUI();
+      setScanLabel('AWAITING PAYMENT SIGNATURE');
+      addLog('k', 'initiating payment signature request via phantom...');
+
+      // Get blockhash from our server-side API proxy to prevent client-side 403 Forbidden errors
+      const blockhashRes = await fetch('/api/v1/blockhash');
+      if (!blockhashRes.ok) {
+        throw new Error('Failed to retrieve recent blockhash from server.');
+      }
+      const { blockhash } = await blockhashRes.json();
+
+      const fromPubkey = new PublicKey(walletAddr);
+      const toPubkey = new PublicKey(TREASURY_WALLET);
+
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey,
+          toPubkey,
+          lamports: SCAN_PRICE_SOL * 1e9, // Convert SOL to Lamports
+        })
+      );
+
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = fromPubkey;
+
+      const { signature } = await provider.signAndSendTransaction(transaction);
+      console.log('[NOCAP Client] Payment signature:', signature);
+      addLog('g', `payment transaction broadcasted: ${signature.substring(0, 8)}...`);
+      addLog('k', 'awaiting block confirmation...');
+
+      setShowGateModal(false);
+      startScanFlow(signature);
+    } catch (err: any) {
+      console.error('[NOCAP Client] Payment failed:', err);
+      setScanLabel('PAYMENT FAILED');
+      addLog('r', `payment failed: ${err.message || err}`);
+      setErrorMsg(`Payment failed: ${err.message || err}`);
+    }
+  };
+
+  const startScanFlow = (txHash?: string) => {
+    const mintStr = customMint.trim();
     console.log('[NOCAP Client] Initiating live scan for Mint:', mintStr);
     console.log('[NOCAP Client] Active connected wallet:', walletAddr);
     // Connect to Live Next.js SSE Endpoint
     setScanLabel('SCANNING · LIVE API STREAM');
     addLog('k', `scan ${mintStr.substring(0, 8)}… · stream open`);
-    
+
     setSteps((prev) => {
       const next = [...prev];
       next[0] = { ...next[0], status: 'active' };
       return next;
     });
 
-    const url = `/api/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true${walletAddr ? `&userWallet=${walletAddr}` : ''}`;
+    let url = `/api/v1/scan?mint=${encodeURIComponent(mintStr)}&stream=true${walletAddr ? `&userWallet=${walletAddr}` : ''}`;
+    if (txHash) {
+      url += `&txHash=${txHash}`;
+    }
     const es = new EventSource(url);
     activeESRef.current = es;
 
@@ -463,7 +539,7 @@ export default function Home() {
           addLog('f', 'calculating behaviors similarity');
           setProgressPct(80);
         }
-      } catch (err) {}
+      } catch (err) { }
     });
 
     es.addEventListener('cluster', (e) => {
@@ -476,7 +552,7 @@ export default function Home() {
         } else {
           addLog('a', `cluster resolved: ${data.wallets} wallets linked to single parent`);
         }
-      } catch (err) {}
+      } catch (err) { }
     });
 
     es.addEventListener('verdict', (e) => {
@@ -488,10 +564,10 @@ export default function Home() {
         } else {
           console.warn('[NOCAP Client] Warning: Data was not saved to database.');
         }
-        
+
         setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
         setProgressPct(100);
-        
+
         const durationS = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
         setScanLabel(`DONE · ${durationS}`);
 
@@ -524,7 +600,7 @@ export default function Home() {
           exps: [
             data.verdict === 'CAP' ? fgBundle() : fgOrganic(),
             barsFor(data.verdict === 'CAP' ? 'cap' : 'nocap'),
-            data.verdict === 'CAP' 
+            data.verdict === 'CAP'
               ? 'live scan detection\nhigh wallet similarity\nsupply concentration detected'
               : 'live scan detection\norganic transfer sources\nbenign trading distribution',
             data.reasons?.[0]?.text || (data.verdict === 'CAP' ? 'Typical extraction cluster.' : 'Organic wallet profile.')
@@ -534,7 +610,7 @@ export default function Home() {
         showVerdict(liveScenario);
         es.close();
         activeESRef.current = null;
-      } catch (err) {}
+      } catch (err) { }
     });
 
     es.onerror = () => {
@@ -800,7 +876,7 @@ export default function Home() {
         p.al -= 1.1 * dt;
         if (p.al <= 0) pulses.splice(k, 1);
       }
-      
+
       if (phase === 0) {
         spawnAcc += dt;
         while (spawnAcc > 0.13 && buyers.length < 20) {
@@ -1262,11 +1338,10 @@ export default function Home() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="eyebrow">SCAN REPORT</span>
                       {verdictLevel && (
-                        <span className={`px-2 py-0.5 text-[9px] tracking-widest font-mono rounded uppercase ${
-                          verdictLevel === 'PRELIMINARY' ? 'bg-amber/20 text-amber border border-amber/30' :
-                          verdictLevel === 'PROVISIONAL' ? 'bg-cyan/20 text-cyan border border-cyan/30' :
-                          'bg-emerald/20 text-emerald border border-emerald/30'
-                        }`}>
+                        <span className={`px-2 py-0.5 text-[9px] tracking-widest font-mono rounded uppercase ${verdictLevel === 'PRELIMINARY' ? 'bg-amber/20 text-amber border border-amber/30' :
+                            verdictLevel === 'PROVISIONAL' ? 'bg-cyan/20 text-cyan border border-cyan/30' :
+                              'bg-emerald/20 text-emerald border border-emerald/30'
+                          }`}>
                           {verdictLevel}
                         </span>
                       )}
@@ -1472,17 +1547,17 @@ export default function Home() {
                 <path d="M174 61h86" className="d-line" />
                 <path d="M174 61h86" className="d-flow" />
                 <circle cx="260" cy="61" r="5" className="d-pulse" />
-                
+
                 <rect x="274" y="24" width="200" height="120" rx="4" className="d-box" />
                 <text x="292" y="54" className="d-label">NOCAP Engine</text>
                 <text x="292" y="76" className="d-sub">1. Ingestion Queue</text>
                 <text x="292" y="96" className="d-step">2. Graph Tracing (Hop 3)</text>
                 <text x="292" y="116" className="d-step">3. Similarity Scorer</text>
-                
+
                 <path d="M474 84h86" className="d-line" />
                 <path d="M474 84h86" className="d-flow g" />
                 <circle cx="560" cy="84" r="5" className="d-pulse g" />
-                
+
                 <rect x="574" y="24" width="170" height="74" rx="4" className="d-box" />
                 <text x="592" y="54" className="d-label">Your Client</text>
                 <text x="592" y="76" className="d-sub">SSE stream Verdict</text>
@@ -1548,7 +1623,7 @@ export default function Home() {
                   Iframe Embed Code
                 </button>
               </div>
-              
+
               {activeTab === 'csharp' && (
                 <div className="pane active font-mono">
                   <span className="c-dim">// Request Token Scan Verdict</span><br />
@@ -1760,19 +1835,38 @@ export default function Home() {
               lineHeight: '1.6',
               marginBottom: '24px',
             }}>
-              You have used all <b>3 free trial scans</b>. To continue running real-time blockchain investigations, connect a Phantom wallet holding at least <b>1,000 $NOCAP</b>.
+              {walletAddr ? (
+                <span>
+                  You have used all <b>3 free trial scans</b>.<br /><br />
+                  To continue running real-time blockchain investigations, you can pay <b>{SCAN_PRICE_SOL} SOL</b> per scan directly from your connected Phantom wallet.
+                </span>
+              ) : (
+                <span>
+                  You have used all <b>3 free trial scans</b>. To continue running real-time blockchain investigations, connect your Phantom wallet and pay <b>{SCAN_PRICE_SOL} SOL</b> per scan.
+                </span>
+              )}
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  connectWallet();
-                  setShowGateModal(false);
-                }}
-                style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold' }}
-              >
-                CONNECT PHANTOM WALLET
-              </button>
+              {walletAddr ? (
+                <button
+                  className="btn btn-primary"
+                  onClick={payAndScan}
+                  style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold', background: 'linear-gradient(90deg, #ff5470 0%, #f2b544 100%)', border: 'none' }}
+                >
+                  PAY {SCAN_PRICE_SOL} SOL & RUN SCAN
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    connectWallet();
+                    setShowGateModal(false);
+                  }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold' }}
+                >
+                  CONNECT PHANTOM WALLET
+                </button>
+              )}
               <button
                 className="btn btn-ghost"
                 onClick={() => setShowGateModal(false)}
@@ -1782,6 +1876,44 @@ export default function Home() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          backgroundColor: '#0d1324',
+          border: '1px solid rgba(255, 84, 112, 0.4)',
+          borderRadius: '8px',
+          padding: '16px 20px',
+          zIndex: 10000,
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          fontFamily: 'monospace',
+          animation: 'slideIn 0.3s ease-out forwards',
+        }}>
+          <span style={{ color: '#ff5470', fontSize: '18px', fontWeight: 'bold' }}>⚠️</span>
+          <div>
+            <div style={{ color: '#eef3fa', fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px' }}>SYSTEM NOTICE</div>
+            <div style={{ color: '#8494b0', fontSize: '11px', marginTop: '2px', maxWidth: '280px', lineBreak: 'anywhere' }}>{errorMsg}</div>
+          </div>
+          <button
+            onClick={() => setErrorMsg(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#8494b0',
+              cursor: 'pointer',
+              marginLeft: '12px',
+              fontSize: '14px',
+            }}
+          >
+            ✕
+          </button>
         </div>
       )}
     </>

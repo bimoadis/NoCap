@@ -74,7 +74,7 @@ async function getOrCreateWalletProfile(address: string): Promise<any> {
     if (dbProfile) {
       return mapProfile(dbProfile);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // 2. Fetch from Solana RPC
   let txCount = 10;
@@ -110,7 +110,7 @@ async function getOrCreateWalletProfile(address: string): Promise<any> {
 
   try {
     await supabase.from('wallet_profiles').insert(newProfile);
-  } catch (e) {}
+  } catch (e) { }
 
   return mapProfile(newProfile);
 }
@@ -134,7 +134,7 @@ async function traceFundingParent(address: string, creator: string): Promise<{ f
               .eq('address', funder)
               .maybeSingle();
             dbFunder = data;
-          } catch (e) {}
+          } catch (e) { }
           const isCex = dbFunder?.funder_type === 'cex' || funder === '5nGaJJ3tWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71pW';
           return {
             funder,
@@ -173,19 +173,19 @@ async function performInlineScan(
 
       await writer.write(encoder.encode(`event: progress\ndata: ${JSON.stringify({ step: 'buyers', pct: 30 })}\n\n`));
       console.log(`[STEP 2] Fetching signatures from Blockscout for ${mint}...`);
-      
+
       const explorer = new BlockscoutExplorerAdapter();
       const txs = await explorer.getTransactionHistory(mint);
-      
+
       // Determine buyers list (use mock list if empty, or slice to first 20)
-      const evmBuyers = txs.length > 0 
+      const evmBuyers = txs.length > 0
         ? Array.from(new Set(txs.map(t => t.from || t.to).filter(addr => addr && addr.toLowerCase() !== creator.toLowerCase()))).slice(0, 20)
         : [
-            '0x3mVcA71pWqFvNuXyL7zK9aA719xUwL4sKmZrT5eYp',
-            '0xFh2sA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71',
-            '0x8dxaTgHrBKPbVq171SsKZDc11sSNp8cuoncKXYjPM',
-            '0x5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbz'
-          ];
+          '0x3mVcA71pWqFvNuXyL7zK9aA719xUwL4sKmZrT5eYp',
+          '0xFh2sA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71',
+          '0x8dxaTgHrBKPbVq171SsKZDc11sSNp8cuoncKXYjPM',
+          '0x5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbz'
+        ];
 
       console.log(`[STEP 4] Identifying unique buyer wallet addresses. Total: ${evmBuyers.length} buyers.`);
 
@@ -204,7 +204,7 @@ async function performInlineScan(
       for (const trader of evmBuyers) {
         console.log(`[STEP 6] Tracing oldest funding transaction for buyer: ${trader}`);
         console.log(`[STEP 7] Verifying 1-hop relationship routes and creator associations for buyer: ${trader}`);
-        
+
         // Simulating EVM funding source
         const parent = {
           funder: trader.endsWith('71') ? creator : '0x5nGaJJ3tWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71pW',
@@ -230,7 +230,7 @@ async function performInlineScan(
 
       console.log(`[STEP 8] Building final funding graph layout connections...`);
       await writer.write(encoder.encode(`event: progress\ndata: ${JSON.stringify({ step: 'clustering', pct: 70 })}\n\n`));
-      
+
       // 4. Clustering & Coordination detection
       const parentGroups: Record<string, string[]> = {};
       for (const trader of evmBuyers) {
@@ -423,8 +423,8 @@ async function performInlineScan(
     }
 
     const finalTrades = trades.length > 0 ? trades : [
-      { trader: '3mVcA71pWqFvNuXyL7zK9aA719xUwL4sKmZrT5eYp', solAmount: 0.1, tokenAmount: 1000, slot: 120000, signature: 's1', timestamp: Math.floor(Date.now()/1000) },
-      { trader: 'Fh2sA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', solAmount: 0.1, tokenAmount: 1000, slot: 120000, signature: 's2', timestamp: Math.floor(Date.now()/1000) }
+      { trader: '3mVcA71pWqFvNuXyL7zK9aA719xUwL4sKmZrT5eYp', solAmount: 0.1, tokenAmount: 1000, slot: 120000, signature: 's1', timestamp: Math.floor(Date.now() / 1000) },
+      { trader: 'Fh2sA2q93oWpL4sKmZrT5eYpWqFvNuXyL7zK9aA71', solAmount: 0.1, tokenAmount: 1000, slot: 120000, signature: 's2', timestamp: Math.floor(Date.now() / 1000) }
     ];
 
     console.log(`[STEP 4] Identifying unique buyer wallet addresses. Total: ${finalTrades.length} buyers.`);
@@ -501,7 +501,7 @@ async function performInlineScan(
         .select('*')
         .eq('is_active', true)
         .maybeSingle();
-      
+
       if (data) {
         activeRegime = {
           regimeVersion: data.regime_version,
@@ -514,7 +514,7 @@ async function performInlineScan(
           maxBadOverlapCount: data.max_bad_overlap_count,
         };
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const regime = activeRegime || {
       regimeVersion: 'REGIME DEFAULT',
@@ -609,11 +609,11 @@ async function performInlineScan(
     console.error('[Inline Scan Error]', err);
     try {
       await writer.write(encoder.encode(`event: error\ndata: ${JSON.stringify({ error: err.message || 'Internal processing error' })}\n\n`));
-    } catch (e) {}
+    } catch (e) { }
   } finally {
     try {
       await writer.close();
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -694,7 +694,7 @@ export async function GET(request: NextRequest) {
   const mint = searchParams.get('mint');
   const stream = searchParams.get('stream') === 'true';
   const userWallet = searchParams.get('userWallet');
-  const txHash = searchParams.get('txHash');
+  const txHash = searchParams.get('txHash') || request.headers.get('x-payment') || null;
   const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
   return handleScan(mint, stream, userWallet, clientIp, txHash);
 }
@@ -705,7 +705,7 @@ export async function POST(request: NextRequest) {
     const mint = body.mint;
     const stream = body.stream === true;
     const userWallet = body.userWallet || null;
-    const txHash = body.txHash || null;
+    const txHash = body.txHash || request.headers.get('x-payment') || null;
     const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
     return handleScan(mint, stream, userWallet, clientIp, txHash);
   } catch (err) {
@@ -774,6 +774,9 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
 
     const activeSession = session!;
 
+    const TREASURY_WALLET = process.env.NEXT_PUBLIC_TREASURY_WALLET!;
+    const SCAN_PRICE_SOL = parseFloat(process.env.NEXT_PUBLIC_SCAN_PRICE_SOL!);
+
     // 3. Evaluate limits
     if (activeSession.freeScans > 0) {
       // Consume 1 free scan
@@ -786,17 +789,36 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
         access: false,
         updated_at: new Date().toISOString(),
       }).eq('wallet', userWallet);
-        
+
       console.log(`[Gating] Wallet ${userWallet} consumed free scan. Remaining: ${nextFree}`);
     } else {
-      // Free scans exhausted, require 0.05 SOL payment to recipient
+      // Free scans exhausted, require payment
       if (!txHash) {
         return new Response(
           JSON.stringify({
-            error: 'PAYMENT_REQUIRED',
-            message: `Free trials exhausted. To continue, transfer 0.05 SOL to AM8nE8UDBmFYoSxKBN3uSaMDdYwhecxFCVLC1wjPrcb6 and provide the transaction signature.`,
+            x402Version: 2,
+            error: 'Payment Required',
+            message: `Free trials exhausted. To continue, transfer ${SCAN_PRICE_SOL} SOL to ${TREASURY_WALLET} and provide the transaction signature.`,
+            resource: {
+              serviceName: 'NoCap Security Scan',
+              category: 'Analytics'
+            },
+            accepts: [
+              {
+                network: 'solana',
+                asset: 'SOL',
+                amount: String(SCAN_PRICE_SOL),
+                payTo: TREASURY_WALLET
+              }
+            ]
           }),
-          { status: 402, headers: { 'Content-Type': 'application/json' } }
+          {
+            status: 402,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-402-Payment-Required': 'true'
+            }
+          }
         );
       }
 
@@ -811,12 +833,15 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
           if (txInfo && txInfo.meta && !txInfo.meta.err) {
             const message = txInfo.transaction.message;
             const accountKeys = message.accountKeys.map(k => k.pubkey.toBase58());
-            const recipientIndex = accountKeys.indexOf('AM8nE8UDBmFYoSxKBN3uSaMDdYwhecxFCVLC1wjPrcb6');
-            if (recipientIndex !== -1) {
-              const pre = txInfo.meta.preBalances[recipientIndex] || 0;
-              const post = txInfo.meta.postBalances[recipientIndex] || 0;
-              if ((post - pre) >= 0.05 * 1e9) {
-                paymentValid = true;
+            const sender = accountKeys[0];
+            if (sender === userWallet) {
+              const recipientIndex = accountKeys.indexOf(TREASURY_WALLET);
+              if (recipientIndex !== -1) {
+                const pre = txInfo.meta.preBalances[recipientIndex] || 0;
+                const post = txInfo.meta.postBalances[recipientIndex] || 0;
+                if ((post - pre) >= SCAN_PRICE_SOL * 1e9) {
+                  paymentValid = true;
+                }
               }
             }
           }
@@ -830,7 +855,7 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
         return new Response(
           JSON.stringify({
             error: 'INVALID_PAYMENT',
-            message: 'Provided transaction signature does not transfer 0.05 SOL to AM8nE8UDBmFYoSxKBN3uSaMDdYwhecxFCVLC1wjPrcb6.',
+            message: `Provided transaction signature does not transfer ${SCAN_PRICE_SOL} SOL to ${TREASURY_WALLET} from the connected wallet (${userWallet}).`,
           }),
           { status: 402, headers: { 'Content-Type': 'application/json' } }
         );
@@ -842,8 +867,8 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
         access: true,
         updated_at: new Date().toISOString(),
       }).eq('wallet', userWallet);
-        
-      console.log(`[Gating] Wallet ${userWallet} authorized via 0.05 SOL payment transfer.`);
+
+      console.log(`[Gating] Wallet ${userWallet} authorized via ${SCAN_PRICE_SOL} SOL payment transfer.`);
     }
   } catch (err: any) {
     console.error('[Gating Gatekeeper] Error executing gating check, allowing as fallback:', err);
@@ -896,7 +921,7 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
           }
         }
       }
-    } catch (err) {}
+    } catch (err) { }
 
     if (finalData) {
       return new Response(JSON.stringify({
