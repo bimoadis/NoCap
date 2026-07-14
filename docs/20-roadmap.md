@@ -38,3 +38,36 @@ This document details the development milestones and operational targets for NOC
 * **Definition of Done (DoD)**:
   * Exposes secure REST endpoints with rate limiting and key-based access controls.
   * Embedded `/embed` widgets render cleanly inside third-party iframe slots.
+
+---
+
+## Milestone 5: Solana Consolidation (M5)
+* **Goal**: Refactor the current Solana codebase to implement internal Ports & Adapters interfaces and output normalized UAIM documents.
+* **Definition of Done (DoD)**:
+  * Existing Solana pipelines compile and pass tests.
+  * Zero regression on existing Solana API endpoints.
+  * Scan outputs conform to UAIM schema.
+
+## Milestone 6: Universal Engine & Extraction (M6)
+* **Goal**: Isolate all chain-agnostic modules (Risk rules, Scoring calibrators, Narrative templates, AI explainer) into `/shared`, creating a strictly decoupled engine.
+* **Definition of Done (DoD)**:
+  * All shared logic is isolated in `/shared`.
+  * A stub/mock chain adapter can be loaded via the registry and run without modifications to `/shared`.
+
+## Milestone 7: Robinhood Chain Adapter Family (M7)
+* **Goal**: Implement the Robinhood Chain EVM integration to scan meme tokens and flag impersonated Stock Tokens.
+* **Definition of Done (DoD)**:
+  * Users can input a Robinhood Chain `0x` token address and receive a full UAIM-compliant intelligence report.
+  * Fake Stock Tokens are successfully flagged.
+
+## Milestone 8: Cross-Chain Reputations & Bridge Resolution (M8)
+* **Goal**: Build bridge tracing to link week-one Robinhood Wallet identities with historic Solana/Ethereum addresses.
+* **Definition of Done (DoD)**:
+  * Funding trace runs across bridges to trace origin wallets.
+  * The UI/API shows unified multi-chain wallet footprints.
+
+## Milestone 9: AI Portfolio & Agent Surfaces (M9)
+* **Goal**: Package NoCap intelligence as a machine-readable safety oracle for autonomous agents and portfolios.
+* **Definition of Done (DoD)**:
+  * Third-party AI agents can programmatically query token risks using MCP or paying USDG.
+

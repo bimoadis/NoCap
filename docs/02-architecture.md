@@ -3,27 +3,34 @@
 The NOCAP pipeline is built for high speed and predictable scaling under heavy launch volume.
 
 ```
-Helius stream ──> ingestor ──> token buffer (20 trade first)
-                                    │
-                               enrichment workers
-                        (wallet profile + funding 1 hop, cached)
-                                    │
-                               feature engine ──> scorer ──> verdict
-                                    │                         │
-                               Postgres (prediction log)   SSE / API / bot
-                                    │
-                             outcome oracle (cron) ──> metrics publik
+[Inbound Stream] ──> Ingestor (Helius WS / EVM logs) ──> Token Buffer
+                                                          │
+                                                Enrichment Worker Pool
+                                                          │
+                                             ┌────────────▼────────────┐
+                                             │  Orchestrator Registry  │
+                                             └──────┬───────────┬──────┘
+                                                    │           │
+                                       solana/adapters  robinhood/adapters
+                                                    │           │
+                                             ┌──────▼───────────▼──────┐
+                                             │      UAIM Parser        │
+                                             └────────────┬────────────┘
+                                                          │
+                                                   Risk/Scoring/AI
+                                                          │
+                                                    Postgres & SSE
 ```
 
 ## 1. Ingestion Layer
-* **Enhanced WebSockets**: Subscribes to the Pump.fun Program ID (`6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`) on Helius.
-* **Buffer Queue**: Ingests transactions and routes them to Redis-based buffer keys.
-* **Timeout Manager**: Watches the token buffer. If 20 trades are reached or a 15-minute timeout occurs, the token is pushed to the BullMQ enrichment queue.
+* **Multi-Chain Streams**: Subscribes to Helius WebSockets for Solana (Pump.fun) and EVM log filters for Robinhood Chain (`hood.fun`/`NOXA` event signatures via Alchemy feed).
+* **Buffer Queue**: Ingests transactions and routes them to Redis-based buffer keys per token.
+* **Timeout Manager**: Triggers evaluation when trade thresholds are met or a maximum timeout occurs, pushing the token to the BullMQ enrichment queue.
 
-## 2. Enrichment Worker Pool (BullMQ)
-* **Job Scheduler**: Distributes evaluation checks across background workers.
-* **Solana RPC Tracers**: Traces SOL transfer history for the developer and the 20 buyers.
-* **Cache Resolver**: Queries Redis for pre-compiled wallet profiles to prevent duplicate RPC calls.
+## 2. Enrichment Worker Pool & Orchestrator
+* **Capability Router**: The core orchestrator queries the `Chain Registry` to find active adapters and capabilities for the target token's `chainId`.
+* **Parallel Ports & Adapters**: Calls active adapters (e.g. `ChainClient`, `Explorer`, `Dex`, `LaunchSource`, `Wallet`, `Probe`) in parallel.
+* **Cache Resolver**: Prevents duplicate RPC requests by checking Redis and Postgres cache.
 
 ## 3. Scorer & Engine
 * Evaluates rule weights using parameters fetched from the active `regime_configs` table.

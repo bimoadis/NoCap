@@ -9,14 +9,17 @@ The **Architect Agent** maintains monorepo organization, database schemas, packa
 
 ## Package Dependencies Layout
 ```
-                          [apps/api]   [apps/bot]  [apps/worker]
-                               \           |           /
-                                \          |          /
-                             [packages/core]  [packages/db]
+                  [apps/api]  [apps/telegram]  [apps/extension]
+                        \            |            /
+                      [core]  [engine]  [services/worker]
+                        \            |            /
+                          [models/database]
 ```
 
-## Shared Package Roles
-* **`packages/db`**:
-  Exposes the database connection pool client and tables schema using Drizzle ORM.
-* **`packages/core`**:
-  Contains rules calculation engines, Solana transaction decoding logics, Helius stream message structures, and metrics utilities. Does not depend on the DB package directly; instead accepts payload variables/parameters.
+## Modular Package Roles
+* **`models/database`**:
+  Exposes the database connection pool client and table schemas using Drizzle ORM.
+* **`core/` & `engine/`**:
+  Contains rules calculation engines, adapter interfaces, orchestrator logic, and narrative/scoring utilities. Intentionally kept chain-agnostic.
+* **`chains/`**:
+  Contains blockchain-specific client wrappers (EVM & Solana) and implementation adapters.

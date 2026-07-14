@@ -10,7 +10,12 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "sourceMap": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "paths": {
+      "@nocap/models": ["./models/index.ts"],
+      "@nocap/solana": ["./chains/solana/index.ts"],
+      "@nocap/core": ["./packages/core/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "dist"]
 }

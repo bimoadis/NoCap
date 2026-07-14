@@ -1,0 +1,13 @@
+{
+  "name": "@nocap/models",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/uaim/types.js",
+  "types": "./dist/uaim/types.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

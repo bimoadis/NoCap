@@ -14,8 +14,7 @@ This document outlines the strict guidelines and constraints for developers and 
 > [!WARNING]
 > Do NOT implement any of the following for the version 1 MVP:
 > * Machine Learning (ML) or Deep Learning models (all features must be rule-based).
-> * Multichain support (Solana only).
-> * Native token configurations or auto-trading logic.
+> * Auto-trading execution engines or native project tokens.
 > * Mobile applications.
 
 ## Config & Threshold Calibration Rules

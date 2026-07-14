@@ -1,5 +1,5 @@
 {
-  "name": "@nocap/core",
+  "name": "@nocap/solana",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -8,11 +8,10 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.89.1",
-    "dotenv": "^16.4.1",
+    "@nocap/core": "workspace:*",
     "@nocap/models": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0"
+    "typescript": "^5.3.3"
   }
 }

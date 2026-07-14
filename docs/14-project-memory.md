@@ -1,6 +1,6 @@
 # Project Memory & Caching Strategy
 
-NOCAP uses a dual-layer caching strategy (Redis and Postgres) to minimize Solana RPC query costs and speed up verdict calculations.
+NOCAP uses a dual-layer caching strategy (Redis and Postgres) to minimize blockchain RPC query costs and speed up verdict calculations.
 
 ## 1. Caching Levels
 * **L1 Cache (Redis)**: Rapid query cache (TTL: 24 hours). Used to store temporary transaction buffers and active scan progress.
@@ -10,10 +10,11 @@ NOCAP uses a dual-layer caching strategy (Redis and Postgres) to minimize Solana
 ```typescript
 interface CachedWalletProfile {
   address: string;
+  chainId: string;
   first_tx_timestamp: number;
   tx_count: number;
   last_funder: string;
-  funder_type: 'deployer' | 'cex' | 'organic_buyer' | 'unknown';
+  funder_type: 'deployer' | 'cex' | ' organic_buyer' | 'bridge' | 'unknown';
   reputation_flags: string[]; // e.g. ["known_sniper", "rug_participant"]
   trust_score: number;        // confidence scale (0.0 to 1.0)
   updated_at: Date;
@@ -22,5 +23,5 @@ interface CachedWalletProfile {
 
 ## 3. Cache Warming Rules
 * When a scan processes, new profile information is inserted or incrementally updated in Postgres.
-* If a wallet address is searched again within 24 hours, the data is retrieved directly from Redis, preventing redundant Solana RPC lookups.
+* If a wallet address is searched again within 24 hours, the data is retrieved directly from Redis, preventing redundant RPC lookups.
 * **Biweekly Sync**: A background task updates transaction counts and active status for flagged bad-actor wallets.

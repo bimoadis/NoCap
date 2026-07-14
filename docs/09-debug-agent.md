@@ -3,7 +3,7 @@
 The **Debug Agent** provides tools and logging standards to monitor pipeline performance, trace errors, and measure RPC costs.
 
 ## Role Responsibilities
-1. **RPC Usage Tracking**: Implements request tracking to log the count and type of Solana RPC methods called per scan.
+1. **RPC Usage Tracking**: Implements request tracking to log the count and type of blockchain RPC methods (EVM and Solana) called per scan.
 2. **Parallel Shadow Evaluation**: Deploys secondary engine instances executing shadow rulesets alongside the production configurations.
 3. **Verbose Diagnostics Log**: Implements debug log filters for critical components (e.g. queue ingestion, Redis buffers, database connections).
 
@@ -11,13 +11,10 @@ The **Debug Agent** provides tools and logging standards to monitor pipeline per
 Every enrichment task must record RPC metrics inside Redis:
 ```typescript
 interface RpcCallLog {
-  mint: string;
+  assetAddress: string;
+  chainId: string;
   timestamp: number;
-  methods: {
-    getSignaturesForAddress: number;
-    getTransaction: number;
-    getMultipleAccounts: number;
-  };
+  methods: Record<string, number>; // Maps method name (e.g. eth_call, getTransaction) to call count
   totalCallsCount: number;
 }
 ```
