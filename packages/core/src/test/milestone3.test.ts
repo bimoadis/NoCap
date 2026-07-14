@@ -7,7 +7,7 @@ import { RobinhoodDexAdapter } from '../../../../chains/robinhood/adapters/dex.j
 import { normalizeEVMDataToUAIM } from '../../../../chains/robinhood/adapters/normalize.js';
 import { runRiskRules } from '../../../../engine/risk/evaluator.js';
 import { scoreUaimDocument } from '../../../../engine/scoring/scorer.js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 test('Milestone 3: Robinhood Chain Client Honeypot Simulation', async () => {
@@ -53,7 +53,10 @@ test('Milestone 3: Uniswap v3 concentrated LP model', async () => {
 });
 
 test('Milestone 3: Scorer output with EVM mock data', () => {
-  const rulesPath = join(process.cwd(), 'plugins/risk-rules/rules.json');
+  let rulesPath = join(process.cwd(), 'plugins/risk-rules/rules.json');
+  if (!existsSync(rulesPath)) {
+    rulesPath = join(process.cwd(), '../../plugins/risk-rules/rules.json');
+  }
   const rules = JSON.parse(readFileSync(rulesPath, 'utf-8'));
 
   const controlSurface = {

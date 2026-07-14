@@ -1,0 +1,22 @@
+{
+  "name": "@nocap/mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/packages/mcp/src/server.js",
+  "types": "./dist/packages/mcp/src/server.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/packages/mcp/src/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "@nocap/core": "workspace:*",
+    "@nocap/engine": "workspace:*",
+    "@nocap/robinhood": "workspace:*",
+    "@nocap/solana": "workspace:*",
+    "@nocap/models": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0"
+  }
+}

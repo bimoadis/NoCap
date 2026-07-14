@@ -21,7 +21,10 @@ const thresholds: ScorerThresholds = {
 
 test('Milestone 2: Dynamic JSON Rules Engine & Scorer Test', () => {
   // Load dynamic rules from plugins/
-  const rulesPath = join(process.cwd(), 'plugins/risk-rules/rules.json');
+  let rulesPath = join(process.cwd(), 'plugins/risk-rules/rules.json');
+  if (!fs.existsSync(rulesPath)) {
+    rulesPath = join(process.cwd(), '../../plugins/risk-rules/rules.json');
+  }
   const rules = JSON.parse(readFileSync(rulesPath, 'utf-8'));
 
   const mockCtx: FeatureEvaluationContext = {
@@ -101,8 +104,18 @@ test('Milestone 2: Modular boundaries & Import Restrictions Lint Check', () => {
     }
   }
 
-  checkDir(path.join(process.cwd(), 'packages/core/src/engine'));
-  checkDir(path.join(process.cwd(), 'engine'));
+  let coreEngineDir = path.join(process.cwd(), 'src/engine');
+  if (!fs.existsSync(coreEngineDir)) {
+    coreEngineDir = path.join(process.cwd(), 'packages/core/src/engine');
+  }
+
+  let engineDir = path.join(process.cwd(), '../../engine');
+  if (!fs.existsSync(engineDir)) {
+    engineDir = path.join(process.cwd(), 'engine');
+  }
+
+  checkDir(coreEngineDir);
+  checkDir(engineDir);
   console.log('✅ Milestone 2: Boundary check passed. 0 leaks from chains/ detected.');
 });
 
