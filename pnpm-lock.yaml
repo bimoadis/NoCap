@@ -92,6 +92,16 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
+  engine:
+    dependencies:
+      '@nocap/models':
+        specifier: workspace:*
+        version: link:../models
+    devDependencies:
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
   models:
     devDependencies:
       typescript:

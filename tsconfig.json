@@ -14,7 +14,8 @@
     "paths": {
       "@nocap/models": ["./models/index.ts"],
       "@nocap/solana": ["./chains/solana/index.ts"],
-      "@nocap/core": ["./packages/core/src/index.ts"]
+      "@nocap/core": ["./packages/core/src/index.ts"],
+      "@nocap/engine": ["./engine/index.ts"]
     }
   },
   "exclude": ["node_modules", "dist"]

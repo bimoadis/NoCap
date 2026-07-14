@@ -3,11 +3,15 @@ packages:
   - 'packages/*'
   - 'chains/*'
   - 'models'
+  - 'engine'
 
 allowBuilds:
   bufferutil: set this to true or false
   es5-ext: set this to true or false
   esbuild: set this to true or false
+  msgpackr-extract: set this to true or false
+  sharp: set this to true or false
+  unrs-resolver: set this to true or false
   utf-8-validate: set this to true or false
 
 onlyBuiltDependencies:

@@ -1,0 +1,92 @@
+[
+  {
+    "code": "SHARED_FUNDING_PARENT",
+    "severity": "high",
+    "condition": {
+      "field": "ownership.clusterAdjustedConcentration",
+      "operator": ">=",
+      "value": 0.60
+    },
+    "message": "of buyers share a single funding parent. Strong bundling indicator."
+  },
+  {
+    "code": "DEPLOYER_FUNDED_BUYERS",
+    "severity": "high",
+    "condition": {
+      "field": "ownership.insiderShareEstimate",
+      "operator": ">=",
+      "value": 0.10
+    },
+    "message": "of buyers funded directly or 1-hop by deployer."
+  },
+  {
+    "code": "KNOWN_BAD_ACTORS",
+    "severity": "high",
+    "condition": {
+      "field": "trading.earlyWindowProfile.sniperShare",
+      "operator": ">=",
+      "value": 2
+    },
+    "message": "buyers linked to previous confirmed rugs."
+  },
+  {
+    "code": "DEV_BAD_HISTORY",
+    "severity": "high",
+    "condition": {
+      "field": "creator.priorOutcomes.died",
+      "operator": "devBadHistory",
+      "value": 0.70
+    },
+    "message": "Developer has bad launch history."
+  },
+  {
+    "code": "DEV_DUMPED_EARLY",
+    "severity": "high",
+    "condition": {
+      "field": "creator.reputationScore",
+      "operator": "==",
+      "value": 0
+    },
+    "message": "Developer sold tokens before trade 20 check."
+  },
+  {
+    "code": "SAME_BLOCK_CONCENTRATION",
+    "severity": "medium",
+    "condition": {
+      "field": "trading.earlyWindowProfile.sameBlockCount",
+      "operator": "sameBlockRatio",
+      "value": 0.30
+    },
+    "message": "of buyers executed in the exact launch block. Sniper pattern."
+  },
+  {
+    "code": "UNIFORM_BUY_SIZES",
+    "severity": "medium",
+    "condition": {
+      "field": "trading.earlyWindowProfile.buySizeStdDev",
+      "operator": "<=",
+      "value": 0.05
+    },
+    "message": "Sizing uniformity suggests automated bot deployment."
+  },
+  {
+    "code": "FRESH_WALLETS_RATIO",
+    "severity": "medium",
+    "condition": {
+      "field": "ownership.freshWalletRatio",
+      "operator": ">=",
+      "value": 0.60
+    },
+    "message": "of buyers wallets are less than 24 hours old."
+  },
+  {
+    "code": "CLUSTER_DOMINANCE",
+    "severity": "high",
+    "condition": {
+      "field": "ownership.clusterAdjustedConcentration",
+      "operator": ">=",
+      "value": 0.70
+    },
+    "message": "Coordinated clusters dominate of initial buys. Extreme bundling pattern."
+  }
+]
