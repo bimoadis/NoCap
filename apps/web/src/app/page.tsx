@@ -170,7 +170,8 @@ export default function Home() {
         const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
         setAnonScans(walletScans);
       } else {
-        setErrorMsg('Phantom Wallet not found. Please install the Phantom Extension.');
+        setErrorMsg('Phantom Wallet not found. Redirecting to Phantom download page...');
+        window.open('https://phantom.app/download', '_blank');
       }
     } catch (err) {
       console.error('[NOCAP Client] Wallet connection failed:', err);
@@ -418,7 +419,8 @@ export default function Home() {
     try {
       const provider = (window as any).solana;
       if (!provider || !provider.isPhantom) {
-        setErrorMsg('Phantom Wallet not found. Please install the Phantom Extension.');
+        setErrorMsg('Phantom Wallet not found. Redirecting to Phantom download page...');
+        window.open('https://phantom.app/download', '_blank');
         return;
       }
 
