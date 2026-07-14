@@ -15,8 +15,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Verify USDG payment on Robinhood Chain
-    const client = new RobinhoodChainClient();
-    const tx = await client.fetchTransaction(txHash);
+    let tx = null;
+    try {
+      if (!txHash.startsWith('0xmock')) {
+        const client = new RobinhoodChainClient();
+        tx = await client.fetchTransaction(txHash);
+      }
+    } catch (fetchErr) {
+      console.warn('[Agent Checkout] RPC lookup failed, falling back to mock payment verification:', fetchErr);
+    }
 
     if (!tx && !txHash.startsWith('0xmock')) {
       return NextResponse.json({ error: 'Transaction not found on Robinhood Chain' }, { status: 402 });
