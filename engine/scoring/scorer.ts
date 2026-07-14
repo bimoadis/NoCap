@@ -44,7 +44,7 @@ export function scoreUaimDocument(uaim: UAIMDocument, risks: UAIMRiskCode[]): UA
     value: riskScore,
     verdict,
     subclass,
-    confidence: riskScore / 100,
+    confidence: verdict === 'CAP' ? (riskScore / 100) : (1 - (riskScore / 100)),
     regimeVersion: 'W14',
     oneLineReason: risks[0] ? `Risk detected: ${risks[0].code}` : 'Funding and buyer patterns appear organic.'
   };

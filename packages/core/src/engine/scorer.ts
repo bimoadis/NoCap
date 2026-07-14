@@ -182,7 +182,7 @@ export function evaluateVerdictUAIM(uaim: UAIMDocument, thresholds: ScorerThresh
     value: riskScore,
     verdict,
     subclass,
-    confidence: riskScore / 100,
+    confidence: verdict === 'CAP' ? (riskScore / 100) : (1 - (riskScore / 100)),
     regimeVersion: 'W14',
     oneLineReason: reasons[0]?.text || 'No risks detected.'
   };
@@ -328,7 +328,7 @@ export function evaluateVerdict(features: ComputedFeatures, thresholds: ScorerTh
   return {
     verdict,
     subclass,
-    confidence: riskScore / 100, // Return riskScore directly (0.0 to 1.0)
+    confidence: verdict === 'CAP' ? (riskScore / 100) : (1 - (riskScore / 100)),
     reasons,
     verdictLevel,
   };
