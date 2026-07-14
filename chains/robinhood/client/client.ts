@@ -2,33 +2,69 @@ import { ChainClientAdapter } from '../../../packages/core/src/adapters/ports.js
 
 export class RobinhoodChainClient implements ChainClientAdapter {
   chainId = '4663';
+  private rpcUrl: string;
+
+  constructor() {
+    this.rpcUrl = process.env.ALCHEMY_ROBINHOOD_RPC_URL || 'https://rpc.robinhoodchain.com';
+  }
 
   async fetchTransaction(signature: string): Promise<any> {
-    return {
-      hash: signature,
-      from: '0x1234567890123456789012345678901234567890',
-      to: '0x0000000000000000000000000000000000000000',
-      value: '0',
-      gasPrice: '100000000',
-      blockNumber: 12345
-    };
+    const res = await fetch(this.rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_getTransactionByHash',
+        params: [signature],
+        id: 1
+      })
+    });
+    const json = await res.json() as any;
+    return json.result;
   }
 
   subscribeToLogs(callback: (log: any) => void): void {
-    // Mock WebSocket subscription
+    // WebSockets are optional; production can fall back to polling logs
   }
 
-  async simulateCall(target: string, data: string): Promise<any> {
-    // If target ends with '000' (mock honeypot token), return revert/fail signature
-    if (target.endsWith('000')) {
-      return {
-        success: false,
-        revertReason: 'HONEYPOT_DETECTED_TRANSFER_BLOCKED'
-      };
+  async simulateCall(target: string, data: string): Promise<{ success: boolean; revertReason?: string }> {
+    try {
+      const res = await fetch(this.rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_call',
+          params: [{ to: target, data }, 'latest'],
+          id: 1
+        })
+      });
+      const json = await res.json() as any;
+      if (json.error) {
+        return {
+          success: false,
+          revertReason: json.error.message || 'TRANSACTION_REVERTED'
+        };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, revertReason: err.message };
     }
-    return {
-      success: true,
-      returnValue: '0x0000000000000000000000000000000000000000000000000000000000000001'
-    };
+  }
+
+  async getCode(address: string): Promise<string> {
+    const res = await fetch(this.rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_getCode',
+        params: [address, 'latest'],
+        id: 1
+      })
+    });
+    const json = await res.json() as any;
+    return json.result || '0x';
   }
 }
+

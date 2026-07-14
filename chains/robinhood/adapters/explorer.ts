@@ -2,21 +2,40 @@ import { ExplorerAdapter } from '../../../packages/core/src/adapters/ports.js';
 
 export class BlockscoutExplorerAdapter implements ExplorerAdapter {
   chainId = '4663';
+  private apiBase: string;
+
+  constructor() {
+    this.apiBase = process.env.BLOCKSCOUT_API_BASE_URL || 'https://explorer.robinhoodchain.com/api/v2';
+  }
 
   async getTransactionHistory(address: string): Promise<any[]> {
-    return [
-      { hash: '0xabc', from: address, to: '0xdef', value: '1.5' }
-    ];
+    try {
+      const res = await fetch(`${this.apiBase}/addresses/${address}/transactions`);
+      const json = await res.json() as any;
+      return json.items || [];
+    } catch {
+      return [];
+    }
   }
 
   async getTokenHolders(assetAddress: string): Promise<any[]> {
-    return [
-      { address: '0xholder1', balance: '10000000000000000000' }
-    ];
+    try {
+      const res = await fetch(`${this.apiBase}/tokens/${assetAddress}/holders`);
+      const json = await res.json() as any;
+      return json.items || [];
+    } catch {
+      return [];
+    }
   }
 
   async isSourceVerified(address: string): Promise<boolean> {
-    // Mock verified status: true if contract doesn't end with 'f'
-    return !address.endsWith('f');
+    try {
+      const res = await fetch(`${this.apiBase}/smart-contracts/${address}`);
+      const json = await res.json() as any;
+      return !!json.is_verified;
+    } catch {
+      return false;
+    }
   }
 }
+
