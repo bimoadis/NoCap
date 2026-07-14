@@ -5,6 +5,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { computeFeatures, evaluateVerdict } from '@nocap/core';
 import { runRiskRules, scoreUaimDocument } from '@nocap/engine';
 import { normalizeEVMDataToUAIM, RobinhoodChainClient, BlockscoutExplorerAdapter } from '@nocap/robinhood';
+import { mapSolanaContextToUAIM } from '@nocap/solana';
 import dotenv from 'dotenv';
 import dns from 'dns';
 
@@ -541,6 +542,19 @@ async function performInlineScan(
 
     console.log(`[STEP 13] Generating structured human-readable reasons for verdict report...`);
 
+    const uaim = mapSolanaContextToUAIM({
+      mint,
+      creator,
+      socialsExist,
+      trades: finalTrades.map(t => ({ ...t, side: 'buy' })),
+      walletProfiles: walletProfilesMap,
+      fundingSources,
+    });
+
+    const reasonsList = verdict.reasons.length > 0
+      ? verdict.reasons
+      : [{ code: 'SAFE', text: 'Funding and buyer patterns appear organic.', severity: 'low' }];
+
     let dbSaved = false;
     // Save to predictions table
     console.log(`[STEP 14] Logging immutable scan prediction record to PostgreSQL database...`);
@@ -551,11 +565,12 @@ async function performInlineScan(
         verdict: verdict.verdict,
         confidence: verdict.confidence,
         subclass: verdict.subclass,
-        reasons: verdict.reasons,
+        reasons: reasonsList,
         features,
         regime_version: regime.regimeVersion,
         created_at: new Date().toISOString(),
         wallet: userWallet,
+        uaim_document: uaim,
       });
 
       // Trigger oracle outcome resolution instantly for development feedback
@@ -584,7 +599,7 @@ async function performInlineScan(
       verdict: verdict.verdict,
       confidence: verdict.confidence,
       subclass: verdict.subclass,
-      reasons: verdict.reasons,
+      reasons: reasonsList,
       verdictLevel: verdict.verdictLevel,
       dbSaved: dbSaved,
       features,
