@@ -11,6 +11,9 @@
   "dependencies": {
     "@nocap/core": "workspace:*",
     "@nocap/db": "workspace:*",
+    "@nocap/engine": "workspace:*",
+    "@nocap/robinhood": "workspace:*",
+    "@nocap/solana": "workspace:*",
     "@solana/web3.js": "^1.98.4",
     "@supabase/supabase-js": "^2.110.2",
     "bullmq": "^5.1.9",
