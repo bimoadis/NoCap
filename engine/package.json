@@ -2,8 +2,8 @@
   "name": "@nocap/engine",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/engine/index.js",
+  "types": "./dist/engine/index.d.ts",
   "scripts": {
     "build": "tsc"
   },

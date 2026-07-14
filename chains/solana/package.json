@@ -2,8 +2,8 @@
   "name": "@nocap/solana",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/chains/solana/index.js",
+  "types": "./dist/chains/solana/index.d.ts",
   "scripts": {
     "build": "tsc"
   },

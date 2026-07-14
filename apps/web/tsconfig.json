@@ -20,11 +20,11 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@nocap/core": ["../../packages/core/dist/packages/core/src/index.d.ts"],
-      "@nocap/models": ["../../models/dist/index.d.ts"],
-      "@nocap/solana": ["../../chains/solana/dist/chains/solana/index.d.ts"],
-      "@nocap/robinhood": ["../../chains/robinhood/dist/chains/robinhood/index.d.ts"],
-      "@nocap/engine": ["../../engine/dist/engine/index.d.ts"]
+      "@nocap/core": ["../../packages/core/dist/packages/core/src/index.js"],
+      "@nocap/models": ["../../models/dist/index.js"],
+      "@nocap/solana": ["../../chains/solana/dist/chains/solana/index.js"],
+      "@nocap/robinhood": ["../../chains/robinhood/dist/chains/robinhood/index.js"],
+      "@nocap/engine": ["../../engine/dist/engine/index.js"]
     }
   },
   "include": [

@@ -2,8 +2,8 @@
   "name": "@nocap/robinhood",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/chains/robinhood/index.js",
+  "types": "./dist/chains/robinhood/index.d.ts",
   "scripts": {
     "build": "tsc"
   },

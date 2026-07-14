@@ -1,4 +1,6 @@
-import { db, pool, regimeConfigs, walletProfiles } from './client.js';
+import { db, pool, regimeConfigs, walletProfiles, riskRules } from './client.js';
+import fs from 'fs';
+import path from 'path';
 
 async function seed() {
   console.log('Seeding database...');
@@ -67,6 +69,25 @@ async function seed() {
         trust: w.trust,
         updatedAt: new Date()
       }).onConflictDoNothing();
+    }
+
+    // 3. Seed risk rules from rules.json
+    let rulesPath = path.resolve(process.cwd(), '../../plugins/risk-rules/rules.json');
+    if (!fs.existsSync(rulesPath)) {
+      rulesPath = path.resolve(process.cwd(), 'plugins/risk-rules/rules.json');
+    }
+    if (fs.existsSync(rulesPath)) {
+      const rules = JSON.parse(fs.readFileSync(rulesPath, 'utf-8'));
+      for (const rule of rules) {
+        await db.insert(riskRules).values({
+          code: rule.code,
+          severity: rule.severity,
+          condition: rule.condition,
+          message: rule.message,
+          isActive: true,
+        }).onConflictDoNothing();
+      }
+      console.log(`Seeded ${rules.length} risk rules.`);
     }
 
     console.log('Seeding completed successfully.');
