@@ -1841,9 +1841,6 @@ export default function Home() {
                 <span>
                   You have used all <b>3 free trial scans</b>.<br /><br />
                   To continue running real-time blockchain investigations, you can pay <b>{SCAN_PRICE_SOL} SOL</b> per scan directly from your connected Phantom wallet.
-                  <span style={{ color: '#ff5472', fontSize: '11px', display: 'block', marginTop: '12px', lineHeight: '1.4' }}>
-                    ⚠️ <b>Phantom Notice:</b> If Phantom blocks the signature request, click <b>"Proceed anyway (unsafe)"</b> at the bottom of the wallet window. This is a default warning for newly registered domains.
-                  </span>
                 </span>
               ) : (
                 <span>
