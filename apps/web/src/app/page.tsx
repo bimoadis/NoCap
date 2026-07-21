@@ -157,21 +157,31 @@ export default function Home() {
 
   const connectWallet = async () => {
     try {
-      const provider = (window as any).solana;
-      if (provider?.isPhantom) {
-        const response = await provider.connect();
-        const addr = response.publicKey.toString();
-        console.log('[NOCAP Client] Wallet connected successfully:', addr);
-        setWalletAddr(addr);
-        localStorage.setItem('nocap_connected_wallet', addr);
+      if (typeof window !== 'undefined') {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const provider = (window as any).solana;
 
-        await fetchWalletStatus(addr);
-        const walletScansKey = `nocap_wallet_scans_${addr}`;
-        const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
-        setAnonScans(walletScans);
-      } else {
-        setErrorMsg('Phantom Wallet not found. Redirecting to Phantom download page...');
-        window.open('https://phantom.app/download', '_blank');
+        if (isMobile && !provider?.isPhantom) {
+          const targetUrl = window.location.href;
+          window.location.href = `https://phantom.app/ul/browse/${encodeURIComponent(targetUrl)}`;
+          return;
+        }
+
+        if (provider?.isPhantom) {
+          const response = await provider.connect();
+          const addr = response.publicKey.toString();
+          console.log('[NOCAP Client] Wallet connected successfully:', addr);
+          setWalletAddr(addr);
+          localStorage.setItem('nocap_connected_wallet', addr);
+
+          await fetchWalletStatus(addr);
+          const walletScansKey = `nocap_wallet_scans_${addr}`;
+          const walletScans = parseInt(localStorage.getItem(walletScansKey) || '0', 10);
+          setAnonScans(walletScans);
+        } else {
+          setErrorMsg('Phantom Wallet not found. Redirecting to Phantom download page...');
+          window.open('https://phantom.app/download', '_blank');
+        }
       }
     } catch (err) {
       console.error('[NOCAP Client] Wallet connection failed:', err);
@@ -184,6 +194,21 @@ export default function Home() {
     setWalletStatus(null);
     setAnonScans(0);
     localStorage.removeItem('nocap_connected_wallet');
+  };
+
+  const handleTelegramRedirect = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined') {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.location.href = "tg://resolve?domain=NoCapAgentBot";
+        setTimeout(() => {
+          window.open("https://t.me/NoCapAgentBot", "_blank");
+        }, 1500);
+      } else {
+        window.open("https://t.me/NoCapAgentBot", "_blank");
+      }
+    }
   };
 
   // Pre-defined scenarios mock data
@@ -1179,6 +1204,7 @@ export default function Home() {
           </a>
           <div className="nav-links">
             <a href="#demo">Demo</a>
+            <a href="#telegram-bot">Telegram</a>
             <a href="#wallets">Wallets</a>
             <a href="#integrate">Integrate</a>
             <a href="#api">API</a>
@@ -1465,6 +1491,81 @@ export default function Home() {
                 </div>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* ================= TELEGRAM BOT MOCKUP ================= */}
+        <section id="telegram-bot" className="tg-section" aria-label="Telegram bot scanner">
+          <div className="wrap">
+            <div className="tg-grid">
+              <div className="tg-info">
+                <span className="eyebrow rv">Telegram Integration</span>
+                <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>NoCap on Telegram.<br/>Scan directly from your chat.</h2>
+                <p className="sub rv" style={{ '--i': 2 } as React.CSSProperties}>
+                  Monitor contracts and wallets instantly on the go. The NoCap Agent Telegram bot runs the same high-fidelity analysis engine directly within Telegram, bringing on-chain insights to your fingertips.
+                </p>
+
+                <div className="tg-cmd-list rv" style={{ '--i': 3 } as React.CSSProperties}>
+                  <div className="tg-cmd-item">
+                    <span className="tg-cmd-code">/start</span>
+                    <span className="tg-cmd-desc">Initialize the bot and view setup instructions.</span>
+                  </div>
+                  <div className="tg-cmd-item">
+                    <span className="tg-cmd-code">Paste CA</span>
+                    <span className="tg-cmd-desc">Paste any Solana token address to scan for bundle configurations and rug risks.</span>
+                  </div>
+                  <div className="tg-cmd-item">
+                    <span className="tg-cmd-code">Scan History</span>
+                    <span className="tg-cmd-desc">View your linked wallet's recent scan profiles and results.</span>
+                  </div>
+                </div>
+
+                <div className="btn-row rv" style={{ '--i': 4 } as React.CSSProperties}>
+                  <a className="btn btn-primary" href="https://t.me/NoCapAgentBot" onClick={handleTelegramRedirect} target="_blank" rel="noopener noreferrer">
+                    Launch Telegram Bot
+                  </a>
+                </div>
+              </div>
+
+              <div className="device-wrapper rv" style={{ '--i': 1 } as React.CSSProperties}>
+                <div className="phone-mockup">
+                  <div className="phone-screen">
+                    <div className="phone-status-bar">
+                      <span>9:41</span>
+                      <div className="status-icons">
+                        <span>📶</span>
+                        <span>🔋</span>
+                      </div>
+                    </div>
+                    
+                    <div className="tg-mock-header">
+                      <div className="tg-mock-avatar">🧢</div>
+                      <div className="tg-mock-info">
+                        <span className="tg-mock-name">NoCap Agent</span>
+                        <span className="tg-mock-status">bot</span>
+                      </div>
+                    </div>
+
+                    <div className="tg-mock-body">
+                      <a href="https://t.me/NoCapAgentBot" onClick={handleTelegramRedirect} target="_blank" rel="noopener noreferrer" style={{ display: 'block', cursor: 'pointer' }}>
+                        <img 
+                          src="/telegram-mockup.png" 
+                          alt="NoCap Agent Telegram Mockup" 
+                          className="tg-mock-image"
+                        />
+                      </a>
+                    </div>
+
+                    <div className="tg-mock-footer">
+                      <div className="tg-mock-input">
+                        <span>Message...</span>
+                      </div>
+                      <span className="tg-mock-send">▲</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1786,7 +1887,7 @@ export default function Home() {
             <div className="foot-links">
               <a href="#api">Docs</a>
               <a href="#track">API status</a>
-              <a href="#" aria-disabled="true">Telegram</a>
+              <a href="https://t.me/NoCapAgentBot" target="_blank" rel="noopener noreferrer">Telegram</a>
               <a href="#" aria-disabled="true">X</a>
               <a href="#integrate">Extension</a>
             </div>
