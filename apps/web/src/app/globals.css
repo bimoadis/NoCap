@@ -1808,17 +1808,12 @@ footer {
   flex: 1;
   overflow-y: scroll;
   position: relative;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
 .tg-mock-body::-webkit-scrollbar {
-  width: 4px;
-}
-
-.tg-mock-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
+  display: none; /* Safari and Chrome */
 }
 
 .tg-mock-image {
