@@ -1204,10 +1204,11 @@ export default function Home() {
           </a>
           <div className="nav-links">
             <a href="#demo">Demo</a>
-            <a href="#telegram-bot">Telegram</a>
+            <a href="https://t.me/NoCapAgentBot" target="_blank" rel="noopener noreferrer">Telegram</a>
             <a href="#wallets">Wallets</a>
             <a href="#integrate">Integrate</a>
             <a href="#api">API</a>
+            <a href="https://x.com/NoCapMultiAgent" target="_blank" rel="noopener noreferrer">X</a>
           </div>
           {walletAddr ? (
             <button className="btn btn-ghost btn-nav font-mono text-[11px] border border-line" onClick={disconnectWallet} style={{ textTransform: 'none' }}>
@@ -1888,7 +1889,7 @@ export default function Home() {
               <a href="#api">Docs</a>
               <a href="#track">API status</a>
               <a href="https://t.me/NoCapAgentBot" target="_blank" rel="noopener noreferrer">Telegram</a>
-              <a href="#" aria-disabled="true">X</a>
+              <a href="https://x.com/NoCapMultiAgent" target="_blank" rel="noopener noreferrer">X</a>
               <a href="#integrate">Extension</a>
             </div>
           </div>

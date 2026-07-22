@@ -1,7 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/x",
+        destination: "https://x.com/NoCapMultiAgent",
+        permanent: true,
+      },
+      {
+        source: "/telegram",
+        destination: "https://t.me/NoCapAgentBot",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
