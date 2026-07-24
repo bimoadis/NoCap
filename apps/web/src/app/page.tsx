@@ -1972,17 +1972,19 @@ export default function Home() {
             }}>
               <span>
                 You have used all <b>3 free trial scans</b>.<br /><br />
-                Payment features are currently <b>Coming Soon</b> while we finalize our wallet security verification.
+                Please hold at least <b>66,666 $NOCAP</b> in your connected wallet to unlock unlimited free scans and wallet checks.
               </span>
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                className="btn btn-primary"
-                disabled
-                style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold', background: 'rgba(132, 148, 176, 0.2)', border: 'none', cursor: 'not-allowed', color: '#5b677d' }}
+              <a
+                href="https://pump.fun/coin/HUrbtEvkUurVmRvq16GZeRP69uiTs9fr5TWzL2Hhpump"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary text-center"
+                style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold', display: 'block', textDecoration: 'none', textAlign: 'center' }}
               >
-                PAYMENT COMING SOON
-              </button>
+                ACQUIRE $NOCAP
+              </a>
               <button
                 className="btn btn-ghost"
                 onClick={() => setShowGateModal(false)}

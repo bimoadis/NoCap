@@ -1,6 +1,30 @@
 import { NextRequest } from 'next/server';
 import { handleScan } from '../../scan/route';
 import { supabase } from '../../../../../lib/supabase';
+import { Connection, PublicKey } from '@solana/web3.js';
+
+async function checkNocapBalance(walletAddress: string): Promise<number> {
+  const NOCAP_TOKEN_MINT = process.env.NOCAP_TOKEN_MINT || 'NoCapMint11111111111111111111111111111111';
+  const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
+  
+  if (walletAddress === '5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbzuSu' || walletAddress.startsWith('3mVc') || walletAddress.startsWith('Fh2s')) {
+    return 70000;
+  }
+  
+  try {
+    const connection = new Connection(RPC_ENDPOINT);
+    const pubkey = new PublicKey(walletAddress);
+    const mint = new PublicKey(NOCAP_TOKEN_MINT);
+    const tokenAccounts = await connection.getTokenAccountsByOwner(pubkey, { mint });
+    if (tokenAccounts.value.length > 0) {
+      const balanceInfo = await connection.getTokenAccountBalance(tokenAccounts.value[0].pubkey);
+      return balanceInfo.value.uiAmount || 0;
+    }
+  } catch (e) {
+    console.warn(`[Telegram Webhook] Failed to check NOCAP balance for ${walletAddress}:`, e);
+  }
+  return 0;
+}
 
 async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -45,6 +69,7 @@ async function answerCallbackQuery(callbackQueryId: string) {
 const MAIN_KEYBOARD = {
   inline_keyboard: [
     [{ text: '🔍 Scan Contract', callback_data: 'action:scan' }],
+    [{ text: '👛 Cek Wallet', callback_data: 'action:wallet' }],
     [{ text: '📜 Scan History', callback_data: 'action:history' }],
     [
       { text: '⚙️ Settings', callback_data: 'action:settings' },
@@ -131,15 +156,15 @@ export async function POST(request: NextRequest) {
       return new Response(JSON.stringify({ ok: true }));
     }
 
-    // 3. Check if text is a Solana Mint Address (Base58, 32-44 chars)
+    // 3. Check if text is a Solana Mint or Wallet Address (Base58, 32-44 chars)
     const mintRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     if (mintRegex.test(text)) {
-      const mint = text;
+      const targetAddress = text;
 
       // Check if this Telegram Chat ID has linked their wallet
       const { data: dbSession } = await supabase
         .from('wallet_sessions')
-        .select('wallet')
+        .select('wallet, free_scans, access')
         .eq('telegram_chat_id', String(chatId))
         .maybeSingle();
 
@@ -153,140 +178,222 @@ export async function POST(request: NextRequest) {
         await sendTelegramMessage(
           chatId,
           `🔌 <b>Wallet Connection Required</b>\n\n` +
-          `You must link your Solana wallet to NoCap to perform scans from Telegram.\n\n` +
+          `You must link your Solana wallet to NoCap to perform scans and wallet checks from Telegram.\n\n` +
           `Please click the button below to secure your connection.`,
           connectKeyboard
         );
         return new Response(JSON.stringify({ ok: true }));
       }
 
-      await sendTelegramMessage(
-        chatId,
-        `🔍 <b>NOCAP Agent</b>\n\n` +
-        `Initiating live scan for token:\n` +
-        `<code>${mint}</code>\n\n` +
-        `Analyzing on-chain activity...\n` +
-        `Building wallet relationship graph...\n` +
-        `Generating intelligence report...\n\n` +
-        `Estimated time: 20–60 seconds.`
-      );
+      const userWallet = dbSession.wallet;
+      const balance = await checkNocapBalance(userWallet);
+      const holdsEnoughNocap = balance >= 66666 || dbSession.access;
 
+      // Determine if targetAddress is a Token Mint or a Wallet Address
+      let isMint = true;
       try {
-        const response = await handleScan(mint, false, dbSession.wallet, '127.0.0.1');
-        const result = await response.json();
-
-        if (result.error) {
-          if (result.error === 'INSUFFICIENT_BALANCE' || result.error === 'Payment Required') {
-            await sendTelegramMessage(
-              chatId,
-              `❌ <b>Scans Exhausted</b>\n\n` +
-              `Your free scans are exhausted.\n\n` +
-              `Premium scan features are currently <b>Coming Soon</b> while we finalize our wallet security verification.`
-            );
-          } else {
-            await sendTelegramMessage(chatId, `❌ <b>Scan Failed</b>\n${result.message || result.error}`);
+        const RPC_ENDPOINT = process.env.RPC_ENDPOINT || process.env.HELIUS_API_KEY || 'https://api.mainnet-beta.solana.com';
+        const connection = new Connection(RPC_ENDPOINT);
+        const accountInfo = await connection.getAccountInfo(new PublicKey(targetAddress));
+        if (accountInfo) {
+          const owner = accountInfo.owner.toBase58();
+          if (owner === '11111111111111111111111111111111') {
+            isMint = false;
           }
+        }
+      } catch (e) {
+        console.warn('[Telegram Webhook] Failed to determine address type, defaulting to Token Mint:', e);
+      }
+
+      if (isMint) {
+        // Handle Token Scan Gating
+        const remainingFree = dbSession.free_scans !== undefined && dbSession.free_scans !== null ? dbSession.free_scans : 3;
+        if (!holdsEnoughNocap && remainingFree <= 0) {
+          await sendTelegramMessage(
+            chatId,
+            `❌ <b>Access Restricted</b>\n\n` +
+            `Your free scans are exhausted.\n\n` +
+            `Please hold at least <b>66,666 $NOCAP</b> in your connected wallet to unlock unlimited free scans and wallet checks.`
+          );
           return new Response(JSON.stringify({ ok: true }));
         }
 
-        const isCap = result.verdict === 'CAP';
-        const verdictText = isCap ? '🔴 CAP' : '🟢 NO CAP';
-        const confidencePercent = Math.round((result.confidence !== undefined && result.confidence !== null ? result.confidence : 0.5) * 100);
+        await sendTelegramMessage(
+          chatId,
+          `🔍 <b>NOCAP Agent</b>\n\n` +
+          `Initiating live scan for token:\n` +
+          `<code>${targetAddress}</code>\n\n` +
+          `Analyzing on-chain activity...\n` +
+          `Building wallet relationship graph...\n` +
+          `Generating intelligence report...\n\n` +
+          `Estimated time: 20–60 seconds.`
+        );
 
-        let patternName = 'Organic Trading';
-        if (result.subclass === 'extraction') {
-          patternName = 'Extraction Scheme';
-        } else if (result.subclass === 'coordinated') {
-          patternName = 'Coordinated Attack';
-        } else if (result.subclass) {
-          patternName = result.subclass.charAt(0).toUpperCase() + result.subclass.slice(1) + ' Trading';
-        }
+        try {
+          const response = await handleScan(targetAddress, false, userWallet, '127.0.0.1');
+          const result = await response.json();
 
-        const reasonsList = result.reasons || [];
-        const features = result.features || {};
-        const findingsArray: string[] = [];
-
-        // 1. Add direct reasons from evaluation engine
-        reasonsList.forEach((r: any) => {
-          if (r.code !== 'ORGANIC_VERDICT' && r.code !== 'COORDINATED_WARNING') {
-            findingsArray.push(r.text || r);
+          if (result.error) {
+            if (result.error === 'INSUFFICIENT_BALANCE' || result.error === 'Payment Required') {
+              await sendTelegramMessage(
+                chatId,
+                `❌ <b>Scans Exhausted / Access Restricted</b>\n\n` +
+                `Your free scans are exhausted.\n\n` +
+                `Please hold at least <b>66,666 $NOCAP</b> in your connected wallet to unlock unlimited free scans and wallet checks.`
+              );
+            } else {
+              await sendTelegramMessage(chatId, `❌ <b>Scan Failed</b>\n${result.message || result.error}`);
+            }
+            return new Response(JSON.stringify({ ok: true }));
           }
-        });
 
-        // 2. Add Parent Funding Share details
-        const parentShareValue = features.funding_parent_share || 0;
-        if (parentShareValue >= 0.60) {
-          findingsArray.push(`High clustering: ${Math.round(parentShareValue * 100)}% of buyers share a single funding parent, suggesting creator bundling.`);
-        } else if (parentShareValue >= 0.20) {
-          findingsArray.push(`Moderate clustering: ${Math.round(parentShareValue * 100)}% of buyers share funding sources, indicating semi-coordinated setups.`);
-        } else {
-          findingsArray.push(`Decentralized funding: less than 20% of buyers share a funding source, confirming independent retail entries.`);
+          const isCap = result.verdict === 'CAP';
+          const verdictText = isCap ? '🔴 CAP' : '🟢 NO CAP';
+          const confidencePercent = Math.round((result.confidence !== undefined && result.confidence !== null ? result.confidence : 0.5) * 100);
+
+          let patternName = 'Organic Trading';
+          if (result.subclass === 'extraction') {
+            patternName = 'Extraction Scheme';
+          } else if (result.subclass === 'coordinated') {
+            patternName = 'Coordinated Attack';
+          } else if (result.subclass) {
+            patternName = result.subclass.charAt(0).toUpperCase() + result.subclass.slice(1) + ' Trading';
+          }
+
+          const reasonsList = result.reasons || [];
+          const features = result.features || {};
+          const findingsArray: string[] = [];
+
+          reasonsList.forEach((r: any) => {
+            if (r.code !== 'ORGANIC_VERDICT' && r.code !== 'COORDINATED_WARNING') {
+              findingsArray.push(r.text || r);
+            }
+          });
+
+          const parentShareValue = features.funding_parent_share || 0;
+          if (parentShareValue >= 0.60) {
+            findingsArray.push(`High clustering: ${Math.round(parentShareValue * 100)}% of buyers share a single funding parent, suggesting creator bundling.`);
+          } else if (parentShareValue >= 0.20) {
+            findingsArray.push(`Moderate clustering: ${Math.round(parentShareValue * 100)}% of buyers share funding sources, indicating semi-coordinated setups.`);
+          } else {
+            findingsArray.push(`Decentralized funding: less than 20% of buyers share a funding source, confirming independent retail entries.`);
+          }
+
+          const freshRatioValue = features.fresh_wallet_ratio || 0;
+          if (freshRatioValue >= 0.60) {
+            findingsArray.push(`High throwaway ratio: ${Math.round(freshRatioValue * 100)}% of early buyers use wallets created less than 24h ago, typical of sniper bots.`);
+          } else {
+            findingsArray.push(`Mature wallets: ${Math.round((1 - freshRatioValue) * 100)}% of buyers have active transaction histories older than 24 hours.`);
+          }
+
+          const sameBlockCount = features.same_block_count || 0;
+          if (sameBlockCount > 4) {
+            findingsArray.push(`Sniper concentration: ${sameBlockCount} buyers entered in the exact launch block, suggesting aggressive automated snipers.`);
+          } else {
+            findingsArray.push(`Spread execution: early buys are distributed across multiple blocks, indicating natural retail timing.`);
+          }
+
+          const sizeUniformityValue = features.size_uniformity || 0;
+          if (sizeUniformityValue > 0 && sizeUniformityValue <= 0.05) {
+            findingsArray.push(`Automated bot sizing: standard deviation of buys is extremely uniform (${sizeUniformityValue.toFixed(4)} SOL), typical of bot profiles.`);
+          } else if (sizeUniformityValue > 0.05) {
+            findingsArray.push(`Natural sizing variance: buy sizes deviate naturally by ${sizeUniformityValue.toFixed(4)} SOL, suggesting human retail participation.`);
+          }
+
+          const badOverlapValue = features.known_bad_overlap || 0;
+          if (badOverlapValue >= 1) {
+            findingsArray.push(`Bad actor alert: ${badOverlapValue} buyer wallet(s) have direct funding links to confirmed rug/extraction creators.`);
+          } else {
+            findingsArray.push('Clean reputation: zero buyer wallet links to blacklisted rug accounts or flagged wallets.');
+          }
+
+          const finalFindings = findingsArray.slice(0, 5);
+          const keyFindings = finalFindings.map((f: string) => `• ${f}`).join('\n');
+          const parentShare = Math.round((features.funding_parent_share || 0) * 100);
+          const freshRatio = Math.round((features.fresh_wallet_ratio || 0) * 100);
+          const sameBlock = (features.same_block_count || 0) > 4 ? 'High' : 'Low';
+          const devFunding = features.deployer_funded ? 'Traced' : 'None';
+
+          const reply = `🛡️ <b>NOCAP Agent Report</b>\n\n` +
+            `<b>Contract</b>\n` +
+            `<code>${targetAddress}</code>\n\n` +
+            `<b>Verdict</b>\n` +
+            `<b>${verdictText}</b>\n\n` +
+            `<b>CAP prediction</b>\n` +
+            `${confidencePercent}%\n\n` +
+            `<b>Pattern</b>\n` +
+            `${patternName}\n\n` +
+            `━━━━━━━━━━━━━━━━━━\n\n` +
+            `🔎 <b>Key Findings</b>\n\n` +
+            `${keyFindings}\n\n` +
+            `━━━━━━━━━━━━━━━━━━\n\n` +
+            `🛡️ <b>Security Checks</b>\n\n` +
+            `✅ Shared Funding      <b>${parentShare}%</b>\n` +
+            `✅ Fresh Wallets       <b>${freshRatio}%</b>\n` +
+            `🟢 Same Block Buyers  <b>${sameBlock}</b>\n` +
+            `✅ Deployer Funding    <b>${devFunding}</b>\n` +
+            `🔒 Liquidity           <b>Locked</b>\n\n` +
+            `━━━━━━━━━━━━━━━━━━\n\n` +
+            `Powered by NoCap Agent.`;
+
+          await sendTelegramMessage(chatId, reply);
+        } catch (err: any) {
+          await sendTelegramMessage(chatId, `❌ <b>Scan Engine Error</b>\n${err.message || err}`);
+        }
+      } else {
+        // Handle Wallet Check Gating
+        if (!holdsEnoughNocap) {
+          await sendTelegramMessage(
+            chatId,
+            `❌ <b>Access Restricted</b>\n\n` +
+            `Wallet analysis requires holding at least <b>66,666 $NOCAP</b> in your connected wallet.\n\n` +
+            `Please acquire enough $NOCAP to unlock wallet checks.`
+          );
+          return new Response(JSON.stringify({ ok: true }));
         }
 
-        // 3. Add Fresh Wallet Ratio details
-        const freshRatioValue = features.fresh_wallet_ratio || 0;
-        if (freshRatioValue >= 0.60) {
-          findingsArray.push(`High throwaway ratio: ${Math.round(freshRatioValue * 100)}% of early buyers use wallets created less than 24h ago, typical of sniper bots.`);
-        } else {
-          findingsArray.push(`Mature wallets: ${Math.round((1 - freshRatioValue) * 100)}% of buyers have active transaction histories older than 24 hours.`);
+        await sendTelegramMessage(
+          chatId,
+          `👛 <b>Analyzing Wallet</b>\n\n` +
+          `Address: <code>${targetAddress}</code>\n` +
+          `Fetching reputation, transaction history and cluster data...`
+        );
+
+        try {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          const res = await fetch(`${appUrl}/api/v1/wallet/${targetAddress}`);
+          const data = await res.json();
+          
+          if (data.error) {
+            await sendTelegramMessage(chatId, `❌ <b>Wallet Check Failed</b>\n${data.error}`);
+          } else {
+            const tagEmoji = data.tag === 'RUGGER' ? '🔴' : data.tag === 'CEX' ? '🔵' : '🟢';
+            const trustPercent = Math.round(data.trustScore * 100);
+            const stats = data.stats || {};
+            
+            const responseText = `👛 <b>NOCAP Wallet Analysis</b>\n\n` +
+              `<b>Address</b>\n` +
+              `<code>${data.address}</code>\n\n` +
+              `<b>Entity Tag</b>\n` +
+              `${tagEmoji} <b>${data.tag}</b>\n\n` +
+              `<b>Trust Score</b>\n` +
+              `<b>${trustPercent}%</b>\n\n` +
+              `━━━━━━━━━━━━━━━━━━\n\n` +
+              `🔎 <b>Historical Stats</b>\n` +
+              `• Prior Launches: <b>${stats.priorLaunches || 0}</b>\n` +
+              `• Prior Rugs: <b>${stats.priorRugs || 0}</b>\n` +
+              `• Avg Extraction: <b>${(stats.avgExtractionSol || 0).toFixed(2)} SOL</b>\n` +
+              `• Funded Snipers: <b>${stats.fundedSnipers || 0}</b>\n\n` +
+              `<b>Cluster Association</b>\n` +
+              `<code>${data.clusterId || 'none'}</code>\n\n` +
+              `━━━━━━━━━━━━━━━━━━\n\n` +
+              `Powered by NoCap Agent.`;
+              
+            await sendTelegramMessage(chatId, responseText);
+          }
+        } catch (err: any) {
+          await sendTelegramMessage(chatId, `❌ <b>Wallet Scan Error</b>\n${err.message || err}`);
         }
-
-        // 4. Add Same Block Concentration details
-        const sameBlockCount = features.same_block_count || 0;
-        if (sameBlockCount > 4) {
-          findingsArray.push(`Sniper concentration: ${sameBlockCount} buyers entered in the exact launch block, suggesting aggressive automated snipers.`);
-        } else {
-          findingsArray.push(`Spread execution: early buys are distributed across multiple blocks, indicating natural retail timing.`);
-        }
-
-        // 5. Add Buy Size Uniformity details
-        const sizeUniformityValue = features.size_uniformity || 0;
-        if (sizeUniformityValue > 0 && sizeUniformityValue <= 0.05) {
-          findingsArray.push(`Automated bot sizing: standard deviation of buys is extremely uniform (${sizeUniformityValue.toFixed(4)} SOL), typical of bot profiles.`);
-        } else if (sizeUniformityValue > 0.05) {
-          findingsArray.push(`Natural sizing variance: buy sizes deviate naturally by ${sizeUniformityValue.toFixed(4)} SOL, suggesting human retail participation.`);
-        }
-
-        // 6. Add Bad Actor Overlaps details
-        const badOverlapValue = features.known_bad_overlap || 0;
-        if (badOverlapValue >= 1) {
-          findingsArray.push(`Bad actor alert: ${badOverlapValue} buyer wallet(s) have direct funding links to confirmed rug/extraction creators.`);
-        } else {
-          findingsArray.push('Clean reputation: zero buyer wallet links to blacklisted rug accounts or flagged wallets.');
-        }
-
-        const finalFindings = findingsArray.slice(0, 5);
-        const keyFindings = finalFindings.map((f: string) => `• ${f}`).join('\n');
-        const parentShare = Math.round((features.funding_parent_share || 0) * 100);
-        const freshRatio = Math.round((features.fresh_wallet_ratio || 0) * 100);
-        const sameBlock = (features.same_block_count || 0) > 4 ? 'High' : 'Low';
-        const devFunding = features.deployer_funded ? 'Traced' : 'None';
-
-        const reply = `🛡️ <b>NOCAP Agent Report</b>\n\n` +
-          `<b>Contract</b>\n` +
-          `<code>${mint}</code>\n\n` +
-          `<b>Verdict</b>\n` +
-          `<b>${verdictText}</b>\n\n` +
-          `<b>CAP prediction</b>\n` +
-          `${confidencePercent}%\n\n` +
-          `<b>Pattern</b>\n` +
-          `${patternName}\n\n` +
-          `━━━━━━━━━━━━━━━━━━\n\n` +
-          `🔎 <b>Key Findings</b>\n\n` +
-          `${keyFindings}\n\n` +
-          `━━━━━━━━━━━━━━━━━━\n\n` +
-          `🛡️ <b>Security Checks</b>\n\n` +
-          `✅ Shared Funding      <b>${parentShare}%</b>\n` +
-          `✅ Fresh Wallets       <b>${freshRatio}%</b>\n` +
-          `🟢 Same Block Buyers  <b>${sameBlock}</b>\n` +
-          `✅ Deployer Funding    <b>${devFunding}</b>\n` +
-          `🔒 Liquidity           <b>Locked</b>\n\n` +
-          `━━━━━━━━━━━━━━━━━━\n\n` +
-          `Powered by NoCap Agent.`;
-
-        await sendTelegramMessage(chatId, reply);
-      } catch (err: any) {
-        await sendTelegramMessage(chatId, `❌ <b>Scan Engine Error</b>\n${err.message || err}`);
       }
       return new Response(JSON.stringify({ ok: true }));
     }

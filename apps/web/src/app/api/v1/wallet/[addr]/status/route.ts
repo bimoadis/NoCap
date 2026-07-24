@@ -36,7 +36,7 @@ export async function GET(
     
     // Sandbox mockup overrides for testing convenience
     if (addr === '5tkE4DnF7vbBq5uhVbJDZCXzmSgddKEBRu6omsrbzuSu' || addr.startsWith('3mVc') || addr.startsWith('Fh2s')) {
-      balance = 1500; // Mock balance >= 1000 for unlocked access
+      balance = 70000; // Mock balance >= 66666 for unlocked access
     } else {
       try {
         const connection = new Connection(RPC_ENDPOINT);
@@ -80,8 +80,8 @@ export async function GET(
       console.warn(`[Wallet Status] Failed to query/save wallet profile for ${addr} from DB:`, e);
     }
 
-    const burnTokensThreshold = 1000;
-    const hasAccess = false;
+    const burnTokensThreshold = 66666;
+    const hasAccess = balance >= burnTokensThreshold;
     const freeScansLeft = Math.max(0, 3 - spins);
 
     // Save/Update session data in Supabase wallet_sessions table
