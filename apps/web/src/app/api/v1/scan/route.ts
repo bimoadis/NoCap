@@ -798,7 +798,7 @@ export async function handleScan(mint: string | null, stream: boolean, userWalle
           JSON.stringify({
             x402Version: 2,
             error: 'Payment Required',
-            message: `Free trials exhausted. To continue, transfer ${SCAN_PRICE_SOL} SOL to ${TREASURY_WALLET} and provide the transaction signature.`,
+            message: `Free trials exhausted. Payment features are currently Coming Soon while we finalize our wallet security verification.`,
             resource: {
               serviceName: 'NoCap Security Scan',
               category: 'Analytics'

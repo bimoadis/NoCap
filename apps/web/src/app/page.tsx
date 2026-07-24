@@ -1970,38 +1970,19 @@ export default function Home() {
               lineHeight: '1.6',
               marginBottom: '24px',
             }}>
-              {walletAddr ? (
-                <span>
-                  You have used all <b>3 free trial scans</b>.<br /><br />
-                  To continue running real-time blockchain investigations, you can pay <b>{SCAN_PRICE_SOL} SOL</b> per scan directly from your connected Phantom wallet.
-                </span>
-              ) : (
-                <span>
-                  You have used all <b>3 free trial scans</b>. To continue running real-time blockchain investigations, connect your Phantom wallet and pay <b>{SCAN_PRICE_SOL} SOL</b> per scan.
-                </span>
-              )}
+              <span>
+                You have used all <b>3 free trial scans</b>.<br /><br />
+                Payment features are currently <b>Coming Soon</b> while we finalize our wallet security verification.
+              </span>
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {walletAddr ? (
-                <button
-                  className="btn btn-primary"
-                  onClick={payAndScan}
-                  style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold', background: 'linear-gradient(90deg, #ff5470 0%, #f2b544 100%)', border: 'none' }}
-                >
-                  PAY {SCAN_PRICE_SOL} SOL & RUN SCAN
-                </button>
-              ) : (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    connectWallet();
-                    setShowGateModal(false);
-                  }}
-                  style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold' }}
-                >
-                  CONNECT PHANTOM WALLET
-                </button>
-              )}
+              <button
+                className="btn btn-primary"
+                disabled
+                style={{ width: '100%', padding: '12px', borderRadius: '6px', fontWeight: 'bold', background: 'rgba(132, 148, 176, 0.2)', border: 'none', cursor: 'not-allowed', color: '#5b677d' }}
+              >
+                PAYMENT COMING SOON
+              </button>
               <button
                 className="btn btn-ghost"
                 onClick={() => setShowGateModal(false)}

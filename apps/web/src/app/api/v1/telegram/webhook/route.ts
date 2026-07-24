@@ -176,12 +176,12 @@ export async function POST(request: NextRequest) {
         const result = await response.json();
 
         if (result.error) {
-          if (result.error === 'INSUFFICIENT_BALANCE') {
+          if (result.error === 'INSUFFICIENT_BALANCE' || result.error === 'Payment Required') {
             await sendTelegramMessage(
               chatId,
               `❌ <b>Scans Exhausted</b>\n\n` +
               `Your free scans are exhausted.\n\n` +
-              `Please scan using the NoCap Web App at https://nocapagent.fun to pay 0.05 SOL per scan directly via your Phantom wallet.`
+              `Premium scan features are currently <b>Coming Soon</b> while we finalize our wallet security verification.`
             );
           } else {
             await sendTelegramMessage(chatId, `❌ <b>Scan Failed</b>\n${result.message || result.error}`);
