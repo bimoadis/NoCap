@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
           `<code>${mint}</code>\n\n` +
           `<b>Verdict</b>\n` +
           `<b>${verdictText}</b>\n\n` +
-          `<b>Confidence</b>\n` +
+          `<b>CAP prediction</b>\n` +
           `${confidencePercent}%\n\n` +
           `<b>Pattern</b>\n` +
           `${patternName}\n\n` +

@@ -89,6 +89,15 @@ export default function Home() {
 
   const [tgChatId, setTgChatId] = useState<string | null>(null);
   const [tgLinkStatus, setTgLinkStatus] = useState<string | null>(null);
+  const [caCopied, setCaCopied] = useState<boolean>(false);
+
+  const handleCopyCA = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText('cooming soon');
+      setCaCopied(true);
+      setTimeout(() => setCaCopied(false), 2000);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -309,7 +318,7 @@ export default function Home() {
         { cls: 'r' as const, text: '9 wallets seen in 31 prior rugs' },
         { cls: 'r' as const, text: '46 of 48 launches dead under 10 min' },
         { cls: 'r' as const, text: 'BUNDLE CONFIRMED' },
-        { cls: 'k' as const, text: 'confidence 0.96 · verdict ready' },
+        { cls: 'k' as const, text: 'CAP prediction 0.96 · verdict ready' },
       ],
       exps: [
         fgBundle(),
@@ -335,7 +344,7 @@ export default function Home() {
         { cls: 'a' as const, text: '2 known snipers · exited, absorbed' },
         { cls: 'g' as const, text: 'deployer holding · socials live before mint' },
         { cls: 'g' as const, text: 'no bundle pattern found' },
-        { cls: 'k' as const, text: 'confidence 0.88 · verdict ready' },
+        { cls: 'k' as const, text: 'CAP prediction 0.88 · verdict ready' },
       ],
       exps: [
         fgOrganic(),
@@ -600,10 +609,10 @@ export default function Home() {
 
         if (data.verdict === 'CAP') {
           addLog('r', 'rug / extraction pattern confirmed');
-          addLog('k', `confidence ${data.confidence} · verdict ready`);
+          addLog('k', `CAP prediction ${data.confidence} · verdict ready`);
         } else {
           addLog('g', 'no bundle / extraction patterns matched');
-          addLog('k', `confidence ${data.confidence} · verdict ready`);
+          addLog('k', `CAP prediction ${data.confidence} · verdict ready`);
         }
 
         // Increment scan count on successful client-side validation
@@ -1227,19 +1236,41 @@ export default function Home() {
         <section className="hero" aria-label="Intro">
           <div className="wrap hero-grid">
             <div className="hero-copy">
-              <span className="eyebrow rv" style={{ '--i': 0 } as React.CSSProperties}>Real time wallet intelligence</span>
-              <h1 className="leading-none rv" style={{ '--i': 1 } as React.CSSProperties}>
+              <div
+                className="inline-flex items-center gap-3.5 mb-6 px-5 py-3 rounded-lg bg-[#090d15]/85 hover:bg-[#0c1220] transition-all duration-300 cursor-pointer select-none rv max-w-fit font-mono shadow-[0_0_15px_rgba(83,217,255,0.06)] hover:shadow-[0_0_20px_rgba(83,217,255,0.12)]"
+                style={{ '--i': 0 } as React.CSSProperties}
+                onClick={handleCopyCA}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[14px] tracking-wider text-cyan font-bold uppercase bg-cyan/10 px-2 py-0.5 rounded">CA</span>
+                  <span className="text-base text-ink font-semibold tracking-wide">EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v</span>
+                </div>
+                <div className="flex items-center justify-center w-8 h-8 rounded bg-[#131b2c] hover:bg-[#1a253d] transition-all duration-200 ml-1">
+                  {caCopied ? (
+                    <svg className="w-[18px] h-[18px] text-emerald" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-[18px] h-[18px] text-cyan/70 hover:text-cyan" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                  )}
+                </div>
+                {caCopied && <span className="text-[15px] text-emerald font-semibold ml-1">Copied!</span>}
+              </div>
+              <span className="eyebrow rv" style={{ '--i': 1 } as React.CSSProperties}>Real time wallet intelligence</span>
+              <h1 className="leading-none rv" style={{ '--i': 2 } as React.CSSProperties}>
                 Know before<br />
                 <span className="accent text-emerald">you ape.</span>
               </h1>
-              <p className="sub text-dim rv" style={{ '--i': 2 } as React.CSSProperties}>
+              <p className="sub text-dim rv" style={{ '--i': 3 } as React.CSSProperties}>
                 NOCAP watches the first trades of every launch, traces who funded every buyer, and returns one verdict in seconds. No charts. No noise. One answer.
               </p>
-              <div className="btn-row rv" style={{ '--i': 3 } as React.CSSProperties}>
+              <div className="btn-row rv" style={{ '--i': 4 } as React.CSSProperties}>
                 <a className="btn btn-primary" href="#demo">Run the live demo</a>
                 <a className="btn btn-ghost" href="#api">Get API access</a>
               </div>
-              <div className="hero-stats rv" style={{ '--i': 4 } as React.CSSProperties}>
+              <div className="hero-stats rv" style={{ '--i': 5 } as React.CSSProperties}>
                 <span>
                   <span className="livedot" aria-hidden="true"></span>ENGINE LIVE
                 </span>
@@ -1368,8 +1399,8 @@ export default function Home() {
                       <span className="eyebrow">SCAN REPORT</span>
                       {verdictLevel && (
                         <span className={`px-2 py-0.5 text-[9px] tracking-widest font-mono rounded uppercase ${verdictLevel === 'PRELIMINARY' ? 'bg-amber/20 text-amber border border-amber/30' :
-                            verdictLevel === 'PROVISIONAL' ? 'bg-cyan/20 text-cyan border border-cyan/30' :
-                              'bg-emerald/20 text-emerald border border-emerald/30'
+                          verdictLevel === 'PROVISIONAL' ? 'bg-cyan/20 text-cyan border border-cyan/30' :
+                            'bg-emerald/20 text-emerald border border-emerald/30'
                           }`}>
                           {verdictLevel}
                         </span>
@@ -1501,7 +1532,7 @@ export default function Home() {
             <div className="tg-grid">
               <div className="tg-info">
                 <span className="eyebrow rv">Telegram Integration</span>
-                <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>NoCap on Telegram.<br/>Scan directly from your chat.</h2>
+                <h2 className="rv" style={{ '--i': 1 } as React.CSSProperties}>NoCap on Telegram.<br />Scan directly from your chat.</h2>
                 <p className="sub rv" style={{ '--i': 2 } as React.CSSProperties}>
                   Monitor contracts and wallets instantly on the go. The NoCap Agent Telegram bot runs the same high-fidelity analysis engine directly within Telegram, bringing on-chain insights to your fingertips.
                 </p>
@@ -1538,7 +1569,7 @@ export default function Home() {
                         <span>🔋</span>
                       </div>
                     </div>
-                    
+
                     <div className="tg-mock-header">
                       <div className="tg-mock-avatar">🧢</div>
                       <div className="tg-mock-info">
@@ -1549,9 +1580,9 @@ export default function Home() {
 
                     <div className="tg-mock-body">
                       <a href="https://t.me/NoCapAgentBot" onClick={handleTelegramRedirect} target="_blank" rel="noopener noreferrer" style={{ display: 'block', cursor: 'pointer' }}>
-                        <img 
-                          src="/telegram-mockup.png" 
-                          alt="NoCap Agent Telegram Mockup" 
+                        <img
+                          src="/telegram-mockup.png"
+                          alt="NoCap Agent Telegram Mockup"
                           className="tg-mock-image"
                         />
                       </a>

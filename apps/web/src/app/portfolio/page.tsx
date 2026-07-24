@@ -140,7 +140,7 @@ export default function PortfolioPage() {
                           </span>
                         </div>
                         <div style={{ fontSize: '13px', color: '#8494b0', marginBottom: '12px' }}>
-                          Confidence: {(p.confidence * 100).toFixed(0)}% • Category: {p.subclass}
+                          CAP prediction: {(p.confidence * 100).toFixed(0)}% • Category: {p.subclass}
                         </div>
                         {p.reasons.length > 0 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -183,7 +183,7 @@ export default function PortfolioPage() {
                           </span>
                         </div>
                         <div style={{ fontSize: '13px', color: '#8494b0' }}>
-                          Confidence: {(p.confidence * 100).toFixed(0)}% • Category: {p.subclass}
+                          CAP prediction: {(p.confidence * 100).toFixed(0)}% • Category: {p.subclass}
                         </div>
                       </div>
                     ))

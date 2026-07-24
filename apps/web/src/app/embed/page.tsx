@@ -54,7 +54,7 @@ function EmbedContent() {
         setShowProgress(false);
         setVerdict(data.verdict);
         setVerdictClass(data.verdict === 'CAP' ? 'cap' : 'nocap');
-        setConfidence(`CONFIDENCE ${Math.round(data.confidence * 100)}%`);
+        setConfidence(`CAP PREDICTION ${Math.round(data.confidence * 100)}%`);
         setReason(data.reason || (data.verdict === 'CAP' ? 'Supply pattern controlled.' : 'Organic trading flow confirmed.'));
         es.close();
       } catch (err) {}
