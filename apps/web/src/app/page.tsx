@@ -93,7 +93,7 @@ export default function Home() {
 
   const handleCopyCA = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText('cooming soon');
+      navigator.clipboard.writeText('HUrbtEvkUurVmRvq16GZeRP69uiTs9fr5TWzL2Hhpump');
       setCaCopied(true);
       setTimeout(() => setCaCopied(false), 2000);
     }
@@ -1243,7 +1243,7 @@ export default function Home() {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-[14px] tracking-wider text-cyan font-bold uppercase bg-cyan/10 px-2 py-0.5 rounded">CA</span>
-                  <span className="text-base text-ink font-semibold tracking-wide">EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v</span>
+                  <span className="text-base text-ink font-semibold tracking-wide">HUrbtEvkUurVmRvq16GZeRP69uiTs9fr5TWzL2Hhpump</span>
                 </div>
                 <div className="flex items-center justify-center w-8 h-8 rounded bg-[#131b2c] hover:bg-[#1a253d] transition-all duration-200 ml-1">
                   {caCopied ? (
